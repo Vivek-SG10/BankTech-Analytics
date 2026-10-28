@@ -1,0 +1,62 @@
+[
+  {
+    "transaction_id": "TXN-10001",
+    "account_id": "ACC-44921",
+    "amount": 2500.00,
+    "currency": "USD",
+    "transaction_type": "credit",
+    "category": "Direct Deposit",
+    "merchant_name": "Employer Payroll Inc",
+    "timestamp": "2026-10-25T09:15:00Z",
+    "is_fraud_flagged": false,
+    "risk_score": 0.05
+  },
+  {
+    "transaction_id": "TXN-10002",
+    "account_id": "ACC-44921",
+    "amount": 84.50,
+    "currency": "USD",
+    "transaction_type": "debit",
+    "category": "Groceries",
+    "merchant_name": "Whole Foods Market",
+    "timestamp": "2026-10-25T14:30:22Z",
+    "is_fraud_flagged": false,
+    "risk_score": 0.08
+  },
+  {
+    "transaction_id": "TXN-10003",
+    "account_id": "ACC-89104",
+    "amount": 14999.00,
+    "currency": "USD",
+    "transaction_type": "debit",
+    "category": "Wire Transfer",
+    "merchant_name": "Overseas Crypto Gateway",
+    "timestamp": "2026-10-26T03:12:44Z",
+    "is_fraud_flagged": true,
+    "risk_score": 0.94
+  },
+  {
+    "transaction_id": "TXN-10004",
+    "account_id": "ACC-31295",
+    "amount": 420.00,
+    "currency": "USD",
+    "transaction_type": "debit",
+    "category": "Utilities",
+    "merchant_name": "Metro Power & Light",
+    "timestamp": "2026-10-26T11:00:10Z",
+    "is_fraud_flagged": false,
+    "risk_score": 0.12
+  },
+  {
+    "transaction_id": "TXN-10005",
+    "account_id": "ACC-55210",
+    "amount": 9950.00,
+    "currency": "USD",
+    "transaction_type": "transfer",
+    "category": "Inter-account Transfer",
+    "merchant_name": "Internal Wealth Account",
+    "timestamp": "2026-10-27T08:45:00Z",
+    "is_fraud_flagged": false,
+    "risk_score": 0.22
+  }
+]

@@ -1,0 +1,47 @@
+# ── Phase 0 — required for scaffold + health check ─────────────────────────
+# All packages below have pre-built wheels for Python 3.14 on Windows.
+# No C compiler or MSVC Build Tools needed.
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+# pydantic 2.14+ uses pydantic-core 2.50.1 which ships a cp314-win_amd64 wheel.
+pydantic==2.14.1
+pydantic-settings==2.16.1
+sqlalchemy==2.0.40
+# Async PostgreSQL driver — psycopg3 binary wheel for cp314 available.
+psycopg[binary]==3.3.6
+psycopg[pool]==3.3.6
+python-dotenv==1.2.4
+httpx==0.28.1
+
+# ── Phase 0 testing ─────────────────────────────────────────────────────────
+pytest==8.3.5
+pytest-asyncio==0.26.0
+anyio==4.9.0
+
+# ── Phase 1+ — authentication ────────────────────────────────────────────────
+python-jose[cryptography]==3.3.0
+bcrypt==4.3.0
+python-multipart==0.0.20
+email-validator==2.2.0
+alembic==1.15.2
+
+
+# ── Phase 1+ — analytics (uncomment when implementing analytics) ─────────────
+# pandas==2.2.3
+# numpy==2.2.5
+
+# ── Phase 2+ — RAG (uncomment when implementing RAG) ────────────────────────
+# langchain==0.3.25
+# langchain-community==0.3.23
+# chromadb==0.6.3
+# openai==1.77.0
+
+# ── Phase 2+ — analytics ──────────────────────────────────────────────────────
+# Versions below support Python 3.11 (Docker image) and Python 3.12+ (local).
+# numpy 2.5+ requires Python >=3.12; stay on 2.4.x for Docker compatibility.
+pandas>=2.2.0,<3.2
+numpy>=2.0.0,<2.5
+scipy>=1.13.0,<2.0
+scikit-learn>=1.5.0,<2.0
+aiosqlite>=0.20.0
+greenlet>=3.0.0
