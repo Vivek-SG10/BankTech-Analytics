@@ -40,6 +40,7 @@ Smith, P. C. et al. (1969). The Measurement of Satisfaction in Work and
 """
 from __future__ import annotations
 
+import math
 import warnings
 from dataclasses import dataclass, field
 from typing import Any
@@ -49,6 +50,19 @@ import pandas as pd
 from scipy import stats
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
+
+
+def _safe_float(val: Any, default: float | None = None) -> float | None:
+    """Safely converts a number to float, replacing NaN, Infinity, or errors with default."""
+    if val is None:
+        return default
+    try:
+        f = float(val)
+        if math.isnan(f) or math.isinf(f):
+            return default
+        return round(f, 4)
+    except (ValueError, TypeError, OverflowError):
+        return default
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 MIN_N_CORRELATION = 2      # minimum valid observations for Pearson/Spearman (allows early demo)
@@ -145,9 +159,10 @@ def _cronbach_alpha(df: pd.DataFrame, cols: list[str]) -> float | None:
         return None
     item_vars = sub.var(axis=0, ddof=1)
     total_var = sub.sum(axis=1).var(ddof=1)
-    if total_var == 0:
+    if total_var == 0 or np.isnan(total_var):
         return None
-    return float((k / (k - 1)) * (1 - item_vars.sum() / total_var))
+    alpha = (k / (k - 1)) * (1 - item_vars.sum() / total_var)
+    return _safe_float(alpha)
 
 
 def _mean_to_pct(mean: float) -> float:
@@ -195,21 +210,23 @@ def _index(
         warn = f"Preliminary estimate: N={n} (sample size < 5)"
 
     row_means = sub.mean(axis=1)
-    overall_mean = float(row_means.mean())
-    overall_sd   = float(row_means.std(ddof=1)) if n > 1 else None
+    overall_mean = _safe_float(row_means.mean(), default=0.0)
+    overall_sd   = _safe_float(row_means.std(ddof=1)) if n > 1 else None
     alpha = _cronbach_alpha(df, cols)
 
     if alpha is not None and alpha < ALPHA_THRESHOLD:
         warn = (f"Cronbach's α = {alpha:.3f} < {ALPHA_THRESHOLD}: "
                 "scale reliability is below the accepted threshold.")
 
+    score_pct = _safe_float(_mean_to_pct(overall_mean)) if overall_mean is not None else None
+
     return IndexResult(
         name=name,
         n=n,
-        score_pct=_mean_to_pct(overall_mean),
-        mean_raw=round(overall_mean, 4),
-        sd=round(overall_sd, 4) if overall_sd is not None else None,
-        cronbach_alpha=round(alpha, 4) if alpha is not None else None,
+        score_pct=score_pct,
+        mean_raw=overall_mean,
+        sd=overall_sd,
+        cronbach_alpha=alpha,
         items=cols,
         warning=warn,
     )
@@ -395,19 +412,28 @@ def compute_descriptive_stats(
                 continue
 
             q75, q25 = float(valid.quantile(0.75)), float(valid.quantile(0.25))
+            try:
+                raw_skew = float(stats.skew(valid)) if n > 2 else 0.0
+            except Exception:
+                raw_skew = 0.0
+            try:
+                raw_kurt = float(stats.kurtosis(valid)) if n > 3 else 0.0
+            except Exception:
+                raw_kurt = 0.0
+
             results.append(DescriptiveStats(
                 item=col,
                 label=ITEM_LABELS.get(col, col),
                 n=n,
                 n_missing=n_miss,
-                mean=round(float(valid.mean()), 4),
-                median=float(valid.median()),
-                sd=round(float(valid.std(ddof=1)), 4) if n > 1 else None,
-                min_val=float(valid.min()),
-                max_val=float(valid.max()),
-                iqr=round(q75 - q25, 4),
-                skewness=round(float(stats.skew(valid)), 4) if n > 2 else 0.0,
-                kurtosis=round(float(stats.kurtosis(valid)), 4) if n > 3 else 0.0,
+                mean=_safe_float(valid.mean()),
+                median=_safe_float(valid.median()),
+                sd=_safe_float(valid.std(ddof=1)) if n > 1 else None,
+                min_val=_safe_float(valid.min()),
+                max_val=_safe_float(valid.max()),
+                iqr=_safe_float(q75 - q25),
+                skewness=_safe_float(raw_skew, default=0.0),
+                kurtosis=_safe_float(raw_kurt, default=0.0),
             ))
 
     return results
@@ -438,23 +464,55 @@ def _correlate(
         )
 
     a, b = combined.iloc[:, 0], combined.iloc[:, 1]
-    if method == "pearson":
-        r, p = stats.pearsonr(a, b)
-    else:
-        r, p = stats.spearmanr(a, b)
+    if a.nunique() <= 1 or b.nunique() <= 1:
+        return CorrelationResult(
+            x_label=x_label, y_label=y_label,
+            label=f"{x_label} ↔ {y_label}",
+            method=method, n=n,
+            r=None, p_value=None, significant=None,
+            suppressed=True,
+            note="Suppressed: Insufficient variance in survey responses (identical ratings).",
+        )
 
-    return CorrelationResult(
-        x_label=x_label, y_label=y_label,
-        label=f"{x_label} ↔ {y_label}",
-        method=method, n=n,
-        r=round(float(r), 4),
-        p_value=round(float(p), 4),
-        significant=(float(p) < 0.05),
-        note=(
-            "NOTE: A statistically significant correlation does not imply causation. "
-            "Findings should be interpreted within the theoretical framework."
-        ),
-    )
+    try:
+        if method == "pearson":
+            r_val, p_val = stats.pearsonr(a, b)
+        else:
+            r_val, p_val = stats.spearmanr(a, b)
+
+        safe_r = _safe_float(r_val)
+        safe_p = _safe_float(p_val)
+        if safe_r is None or safe_p is None:
+            return CorrelationResult(
+                x_label=x_label, y_label=y_label,
+                label=f"{x_label} ↔ {y_label}",
+                method=method, n=n,
+                r=None, p_value=None, significant=None,
+                suppressed=True,
+                note="Suppressed: Correlation undefined due to numerical invariance.",
+            )
+
+        return CorrelationResult(
+            x_label=x_label, y_label=y_label,
+            label=f"{x_label} ↔ {y_label}",
+            method=method, n=n,
+            r=safe_r,
+            p_value=safe_p,
+            significant=(safe_p < 0.05),
+            note=(
+                "NOTE: A statistically significant correlation does not imply causation. "
+                "Findings should be interpreted within the theoretical framework."
+            ),
+        )
+    except Exception as ex:
+        return CorrelationResult(
+            x_label=x_label, y_label=y_label,
+            label=f"{x_label} ↔ {y_label}",
+            method=method, n=n,
+            r=None, p_value=None, significant=None,
+            suppressed=True,
+            note=f"Suppressed: {str(ex)}",
+        )
 
 
 def compute_correlations(
@@ -579,8 +637,9 @@ def compute_regression(
         df = pd.concat([outcome] + list(predictors.values()), axis=1).dropna()
         n = len(df)
         pred_labels = list(predictors.keys())
+        p_count = len(pred_labels)
 
-        if n < MIN_N_REGRESSION:
+        if n <= p_count + 1 or n < MIN_N_REGRESSION:
             return RegressionResult(
                 outcome=outcome_label,
                 predictors=pred_labels,
@@ -588,62 +647,99 @@ def compute_regression(
                 r_squared=None, adj_r_squared=None,
                 f_statistic=None, f_p_value=None,
                 suppressed=True,
-                note=f"Suppressed: N={n} < minimum {MIN_N_REGRESSION} for regression.",
+                note=f"Suppressed: N={n} insufficient for regression (requires at least N={p_count + 2}).",
             )
 
         y = df.iloc[:, 0].values
         X = df.iloc[:, 1:].values
-        p_count = X.shape[1]
 
-        model = LinearRegression().fit(X, y)
-        y_pred = model.predict(X)
-        r2 = float(r2_score(y, y_pred))
-        adj_r2 = float(1 - (1 - r2) * (n - 1) / (n - p_count - 1))
+        if np.all(y == y[0]) or np.any(np.all(X == X[0, :], axis=0)):
+            return RegressionResult(
+                outcome=outcome_label,
+                predictors=pred_labels,
+                n=n,
+                r_squared=None, adj_r_squared=None,
+                f_statistic=None, f_p_value=None,
+                suppressed=True,
+                note="Suppressed: Zero variance in outcome or predictor values.",
+            )
 
-        # F-statistic and p-value
-        ss_res = float(np.sum((y - y_pred) ** 2))
-        ss_tot = float(np.sum((y - y.mean()) ** 2))
-        if ss_tot == 0:
-            f_stat, f_p = None, None
-        else:
-            ms_reg = (ss_tot - ss_res) / p_count
-            ms_res = ss_res / (n - p_count - 1)
-            f_stat = float(ms_reg / ms_res) if ms_res > 0 else None
-            f_p = float(stats.f.sf(f_stat, p_count, n - p_count - 1)) if f_stat else None
-
-        # Coefficient standard errors via OLS formula
         try:
-            X_aug = np.column_stack([np.ones(n), X])
-            cov = np.linalg.inv(X_aug.T @ X_aug) * (ss_res / (n - p_count - 1))
-            se = np.sqrt(np.diag(cov))
-            coefs: dict[str, dict[str, float]] = {}
-            coefs["intercept"] = {
-                "coef": round(float(model.intercept_), 4),
-                "se": round(float(se[0]), 4),
-                "t": round(float(model.intercept_ / se[0]), 4),
-                "p": round(float(2 * stats.t.sf(abs(model.intercept_ / se[0]), n - p_count - 1)), 4),
-            }
-            for i, label in enumerate(pred_labels):
-                coefs[label] = {
-                    "coef": round(float(model.coef_[i]), 4),
-                    "se": round(float(se[i + 1]), 4),
-                    "t": round(float(model.coef_[i] / se[i + 1]), 4),
-                    "p": round(float(2 * stats.t.sf(abs(model.coef_[i] / se[i + 1]), n - p_count - 1)), 4),
-                }
-        except np.linalg.LinAlgError:
-            coefs = {}
+            model = LinearRegression().fit(X, y)
+            y_pred = model.predict(X)
+            raw_r2 = r2_score(y, y_pred)
+            r2 = _safe_float(raw_r2)
+            deg_free = n - p_count - 1
+            adj_r2 = _safe_float(1.0 - (1.0 - r2) * (n - 1) / deg_free) if (deg_free > 0 and r2 is not None) else None
 
-        return RegressionResult(
-            outcome=outcome_label,
-            predictors=pred_labels,
-            n=n,
-            r_squared=round(r2, 4),
-            adj_r_squared=round(adj_r2, 4),
-            f_statistic=round(f_stat, 4) if f_stat else None,
-            f_p_value=round(f_p, 4) if f_p else None,
-            coefficients=coefs,
-            note="OLS regression. Interpretation is associative, not causal.",
-        )
+            # F-statistic and p-value
+            ss_res = float(np.sum((y - y_pred) ** 2))
+            ss_tot = float(np.sum((y - y.mean()) ** 2))
+            if ss_tot == 0 or deg_free <= 0:
+                f_stat, f_p = None, None
+            else:
+                ms_reg = (ss_tot - ss_res) / p_count
+                ms_res = ss_res / deg_free
+                if ms_res > 1e-12:
+                    raw_f = float(ms_reg / ms_res)
+                    f_stat = _safe_float(raw_f)
+                    f_p = _safe_float(stats.f.sf(raw_f, p_count, deg_free)) if f_stat is not None else None
+                else:
+                    f_stat, f_p = None, None
+
+            # Coefficient standard errors via OLS formula
+            coefs: dict[str, dict[str, float]] = {}
+            try:
+                X_aug = np.column_stack([np.ones(n), X])
+                cov = np.linalg.inv(X_aug.T @ X_aug) * (ss_res / deg_free)
+                se = np.sqrt(np.diag(cov))
+                intercept_se = _safe_float(se[0])
+                t_val = _safe_float(model.intercept_ / intercept_se) if (intercept_se and intercept_se > 0) else None
+                p_val = _safe_float(2 * stats.t.sf(abs(model.intercept_ / intercept_se), deg_free)) if (intercept_se and intercept_se > 0) else None
+
+                coefs["intercept"] = {
+                    "coef": _safe_float(model.intercept_, default=0.0) or 0.0,
+                    "se": intercept_se or 0.0,
+                    "t": t_val or 0.0,
+                    "p": p_val or 1.0,
+                }
+                for i, label in enumerate(pred_labels):
+                    pred_se = _safe_float(se[i + 1])
+                    pt_val = _safe_float(model.coef_[i] / pred_se) if (pred_se and pred_se > 0) else None
+                    pp_val = _safe_float(2 * stats.t.sf(abs(model.coef_[i] / pred_se), deg_free)) if (pred_se and pred_se > 0) else None
+                    coefs[label] = {
+                        "coef": _safe_float(model.coef_[i], default=0.0) or 0.0,
+                        "se": pred_se or 0.0,
+                        "t": pt_val or 0.0,
+                        "p": pp_val or 1.0,
+                    }
+            except Exception:
+                coefs = {}
+
+            return RegressionResult(
+                outcome=outcome_label,
+                predictors=pred_labels,
+                n=n,
+                r_squared=r2,
+                adj_r_squared=adj_r2,
+                f_statistic=f_stat,
+                f_p_value=f_p,
+                coefficients=coefs,
+                note="OLS regression. Interpretation is associative, not causal.",
+            )
+        except Exception as ex:
+            return RegressionResult(
+                outcome=outcome_label,
+                predictors=pred_labels,
+                n=n,
+                r_squared=None,
+                adj_r_squared=None,
+                f_statistic=None,
+                f_p_value=None,
+                coefficients={},
+                suppressed=True,
+                note=f"Suppressed: Regression model could not be estimated ({str(ex)}).",
+            )
 
     _empty_s = pd.Series(dtype=float)
 
