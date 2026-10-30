@@ -35,10 +35,10 @@ export default function AboutPage() {
           <h2 className="text-lg font-bold text-slate-900 mb-3">Development Phases</h2>
           <div className="space-y-3">
             {[
-              { phase: 'Phase 0', label: 'Infrastructure & Scaffold', status: 'complete', desc: 'Docker Compose, FastAPI, PostgreSQL, React scaffold, CI health checks.' },
-              { phase: 'Phase 1', label: 'Frontend Foundation', status: 'current', desc: 'Full UI with routing, role-based dashboards, surveys, analytics charts, and FAQ interface.' },
-              { phase: 'Phase 2', label: 'Auth & Data Persistence', status: 'upcoming', desc: 'JWT authentication, survey submission to PostgreSQL, real analytics from the database.' },
-              { phase: 'Phase 3', label: 'RAG Pipeline', status: 'upcoming', desc: 'ChromaDB vector store, LLM integration, cited FAQ answers from banking policy documents.' },
+              { phase: 'Phase 1', label: 'Infrastructure & Frontend Foundation', status: 'complete', desc: 'Docker Compose, FastAPI, PostgreSQL, React UI, routing, role-based dashboards, and CI health checks.' },
+              { phase: 'Phase 2', label: 'Auth & Stakeholder Data Persistence', status: 'complete', desc: 'Stateless JWT authentication, bcrypt encryption, multi-role RBAC, and survey schema migration in PostgreSQL.' },
+              { phase: 'Phase 3', label: 'Research Analytics & Survey Module', status: 'complete', desc: 'Survey submissions, TAI, EJSI, EPI, and CSEI index computation, descriptive stats, and admin audit dashboard.' },
+              { phase: 'Phase 4', label: 'RAG Pipeline & Compliance Assistant', status: 'upcoming', desc: 'ChromaDB vector store, LLM integration, cited FAQ answers from banking policy documents.' },
             ].map(p => (
               <div key={p.phase} className="flex gap-4 items-start">
                 <div className={`mt-0.5 h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
