@@ -18,6 +18,7 @@
  *   10. CSV export
  */
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
@@ -665,9 +666,35 @@ export default function AnalyticsPage() {
 
       {/* Error Notice */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex justify-between items-center">
-          <div><strong>Error:</strong> {error}</div>
-          <button onClick={() => fetchAll(filters)} className="ml-3 underline text-xs font-semibold cursor-pointer">Retry</button>
+        <div className={`mb-6 p-4 rounded-xl text-sm flex justify-between items-center ${
+          error.toLowerCase().includes('not authenticated') || error.toLowerCase().includes('credentials')
+            ? 'bg-amber-50 border border-amber-200 text-amber-900'
+            : 'bg-red-50 border border-red-200 text-red-700'
+        }`}>
+          <div className="flex items-center gap-2">
+            <span>{error.toLowerCase().includes('not authenticated') ? '🔒' : '⚠️'}</span>
+            <div>
+              {error.toLowerCase().includes('not authenticated') || error.toLowerCase().includes('credentials') ? (
+                <span>
+                  <strong>Session Expired:</strong> Your authentication token has expired. Please sign in again as Admin to view the analytics dashboard.
+                </span>
+              ) : (
+                <span><strong>Error:</strong> {error}</span>
+              )}
+            </div>
+          </div>
+          {error.toLowerCase().includes('not authenticated') || error.toLowerCase().includes('credentials') ? (
+            <Link
+              to="/login"
+              className="px-3.5 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition shrink-0 ml-4 shadow-xs"
+            >
+              Sign In
+            </Link>
+          ) : (
+            <button onClick={() => fetchAll(filters)} className="ml-3 underline text-xs font-semibold cursor-pointer">
+              Retry
+            </button>
+          )}
         </div>
       )}
 
