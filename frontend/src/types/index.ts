@@ -135,6 +135,35 @@ export interface SubmissionSummary {
   is_voided: boolean
 }
 
+export interface SubmittedSurveyDetail {
+  id: string
+  survey_type: 'employee' | 'manager' | 'customer'
+  respondent_id: string
+  department: string
+  submitted_at: string
+  is_voided: boolean
+  experience_range?: string | null
+  bank_type?: string | null
+  interaction_type?: string | null
+  service_type?: string | null
+  open_feedback?: string | null
+  avg_score: number
+  scores: Record<string, number>
+}
+
+export interface SurveySubmissionsReport {
+  total: number
+  counts: {
+    employee: number
+    manager: number
+    customer: number
+  }
+  all: SubmittedSurveyDetail[]
+  employee: SubmittedSurveyDetail[]
+  manager: SubmittedSurveyDetail[]
+  customer: SubmittedSurveyDetail[]
+}
+
 // ── Analytics API response types ──────────────────────────────────────────
 
 export interface IndexResult {

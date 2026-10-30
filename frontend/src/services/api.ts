@@ -19,6 +19,7 @@ import type {
   DescriptiveStat,
   CorrelationResult,
   RegressionResult,
+  SurveySubmissionsReport,
 } from '../types'
 
 
@@ -159,6 +160,10 @@ export const surveyApi = {
   /** List authenticated user's own submissions */
   listMine: () =>
     request<SubmissionSummary[]>('/surveys/mine'),
+
+  /** Admin/Researcher: List all submitted surveys across all roles */
+  getAllSubmissions: () =>
+    request<SurveySubmissionsReport>('/surveys/submissions'),
 }
 
 // ── Analytics ─────────────────────────────────────────────────────────────

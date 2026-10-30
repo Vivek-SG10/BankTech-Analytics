@@ -24,6 +24,9 @@ from app.surveys.crud import (
     get_customer_submissions_by_respondent,
     get_employee_submissions_by_respondent,
     get_manager_submissions_by_respondent,
+    list_all_customer_surveys,
+    list_all_employee_surveys,
+    list_all_manager_surveys,
 )
 from app.surveys.schemas import (
     CustomerSurveyRequest,
@@ -173,3 +176,109 @@ async def list_my_submissions(
             ))
 
     return summaries
+
+
+# ── Admin: List all submitted surveys with detailed answers ─────────────────────
+
+@survey_router.get(
+    "/submissions",
+    summary="[Admin] List all submitted surveys with answers",
+    description="Returns all submitted surveys across employee, manager, and customer roles for admin review.",
+)
+async def list_all_submissions(
+    actor: UserOrm = Depends(require_roles("admin", "researcher")),
+    db: AsyncSession = Depends(get_db),
+):
+    emp_rows = await list_all_employee_surveys(db)
+    mgr_rows = await list_all_manager_surveys(db)
+    cust_rows = await list_all_customer_surveys(db)
+
+    def serialize_emp(r):
+        scores = {
+            "tai_1": r.tai_1, "tai_2": r.tai_2, "tai_3": r.tai_3, "tai_4": r.tai_4, "tai_5": r.tai_5,
+            "ejsi_1": r.ejsi_1, "ejsi_2": r.ejsi_2, "ejsi_3": r.ejsi_3, "ejsi_4": r.ejsi_4, "ejsi_5": r.ejsi_5, "ejsi_6": r.ejsi_6,
+            "epi_s_1": r.epi_s_1, "epi_s_2": r.epi_s_2, "epi_s_3": r.epi_s_3,
+        }
+        valid_vals = [v for v in scores.values() if v is not None]
+        avg = round(sum(valid_vals) / len(valid_vals), 2) if valid_vals else 0.0
+        return {
+            "id": str(r.id),
+            "survey_type": "employee",
+            "respondent_id": str(r.respondent_id),
+            "department": r.department or "General",
+            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else "",
+            "is_voided": r.is_voided,
+            "experience_range": r.experience_range,
+            "bank_type": r.bank_type,
+            "open_feedback": r.open_challenges,
+            "avg_score": avg,
+            "scores": scores,
+        }
+
+    def serialize_mgr(r):
+        scores = {
+            "tai_mgr_1": r.tai_mgr_1, "tai_mgr_2": r.tai_mgr_2, "tai_mgr_3": r.tai_mgr_3,
+            "epi_m_1": r.epi_m_1, "epi_m_2": r.epi_m_2, "epi_m_3": r.epi_m_3, "epi_m_4": r.epi_m_4,
+        }
+        valid_vals = [v for v in scores.values() if v is not None]
+        avg = round(sum(valid_vals) / len(valid_vals), 2) if valid_vals else 0.0
+        return {
+            "id": str(r.id),
+            "survey_type": "manager",
+            "respondent_id": str(r.respondent_id),
+            "department": r.department or "Management",
+            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else "",
+            "is_voided": r.is_voided,
+            "experience_range": r.experience_range,
+            "bank_type": r.bank_type,
+            "avg_resolution_min": r.avg_resolution_min,
+            "digital_adoption_pct": r.digital_adoption_pct,
+            "team_size": r.team_size,
+            "open_feedback": f"Team Size: {r.team_size or 'N/A'}, Digital Adoption: {r.digital_adoption_pct or 'N/A'}%" if (r.team_size or r.digital_adoption_pct) else None,
+            "avg_score": avg,
+            "scores": scores,
+        }
+
+    def serialize_cust(r):
+        scores = {
+            "csei_1": r.csei_1, "csei_2": r.csei_2, "csei_3": r.csei_3,
+            "csei_4": r.csei_4, "csei_5": r.csei_5, "csei_6": r.csei_6,
+        }
+        valid_vals = [v for v in scores.values() if v is not None]
+        avg = round(sum(valid_vals) / len(valid_vals), 2) if valid_vals else 0.0
+        return {
+            "id": str(r.id),
+            "survey_type": "customer",
+            "respondent_id": str(r.respondent_id),
+            "department": r.department or "Retail Branch",
+            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else "",
+            "is_voided": r.is_voided,
+            "interaction_type": r.interaction_type,
+            "service_type": r.service_type,
+            "open_feedback": r.open_feedback,
+            "avg_score": avg,
+            "scores": scores,
+        }
+
+    employee_list = [serialize_emp(r) for r in emp_rows]
+    manager_list = [serialize_mgr(r) for r in mgr_rows]
+    customer_list = [serialize_cust(r) for r in cust_rows]
+
+    all_submissions = sorted(
+        employee_list + manager_list + customer_list,
+        key=lambda x: x["submitted_at"],
+        reverse=True,
+    )
+
+    return {
+        "total": len(all_submissions),
+        "counts": {
+            "employee": len(employee_list),
+            "manager": len(manager_list),
+            "customer": len(customer_list),
+        },
+        "all": all_submissions,
+        "employee": employee_list,
+        "manager": manager_list,
+        "customer": customer_list,
+    }

@@ -6,7 +6,7 @@ export default function PrivacyPage() {
     <PageShell title="Privacy Policy" subtitle="How we collect, store and use your data">
       <div className="max-w-3xl mx-auto space-y-6">
         <Card>
-          <p className="text-sm text-slate-500 mb-4">Last updated: October 2024 · Academic Research Version</p>
+          <p className="text-sm text-slate-500 mb-4">Last updated: October 2026 · Academic Research Version</p>
           <div className="space-y-5 text-sm text-slate-700 leading-relaxed">
             <section>
               <h2 className="font-bold text-slate-900 mb-2">1. Who We Are</h2>

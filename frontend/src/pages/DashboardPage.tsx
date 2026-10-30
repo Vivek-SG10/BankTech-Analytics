@@ -65,7 +65,7 @@ function IndexMiniCard({ label, score, colour }: { label: string; score: number 
             </span>
           </div>
         )
-        : <Badge color="amber">N &lt; 5</Badge>}
+        : <Badge color="slate">Pending</Badge>}
     </div>
   )
 }

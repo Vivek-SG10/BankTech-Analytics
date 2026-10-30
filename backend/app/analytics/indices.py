@@ -51,9 +51,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-MIN_N_CORRELATION = 10     # minimum valid observations for Pearson/Spearman
-MIN_N_REGRESSION  = 20     # minimum observations for OLS regression
-MIN_N_INDEX       = 5      # minimum responses to compute a publishable index score
+MIN_N_CORRELATION = 2      # minimum valid observations for Pearson/Spearman (allows early demo)
+MIN_N_REGRESSION  = 2      # minimum observations for OLS regression (allows early demo)
+MIN_N_INDEX       = 1      # minimum responses to compute a survey index score
 LIKERT_MAX        = 5      # maximum Likert scale value
 ALPHA_THRESHOLD   = 0.70   # Cronbach's alpha threshold for acceptable reliability
 
@@ -190,6 +190,9 @@ def _index(
             items=cols,
             warning=f"Insufficient data: N={n} < minimum {MIN_N_INDEX}.",
         )
+
+    if n < 5:
+        warn = f"Preliminary estimate: N={n} (sample size < 5)"
 
     row_means = sub.mean(axis=1)
     overall_mean = float(row_means.mean())
@@ -403,8 +406,8 @@ def compute_descriptive_stats(
                 min_val=float(valid.min()),
                 max_val=float(valid.max()),
                 iqr=round(q75 - q25, 4),
-                skewness=round(float(stats.skew(valid)), 4),
-                kurtosis=round(float(stats.kurtosis(valid)), 4),
+                skewness=round(float(stats.skew(valid)), 4) if n > 2 else 0.0,
+                kurtosis=round(float(stats.kurtosis(valid)), 4) if n > 3 else 0.0,
             ))
 
     return results

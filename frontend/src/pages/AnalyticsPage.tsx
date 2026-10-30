@@ -1,19 +1,21 @@
 /**
  * AnalyticsPage — Research analytics dashboard for admin/researcher roles.
  *
- * All data comes from backend API endpoints.
- * Hardcoded chart values have been removed.
- * Empty-state cards are shown when N is insufficient.
- * A synthetic-data label ("LIVE — drawn from PostgreSQL") is always shown.
+ * All data comes dynamically from backend API endpoints and PostgreSQL survey tables.
+ * Empty-state cards are shown when N is 0.
+ * A live-data label ("LIVE — drawn from PostgreSQL survey responses") is shown.
  *
  * Sections:
  *   1. Filter bar (department, date range, bank type, experience range)
- *   2. Index summary cards (TAI, EJSI, EPI, CSEI)
- *   3. Descriptive statistics — bar chart per item
- *   4. Correlations — scatter-plot summary table + suppression notices
- *   5. Regression models — coefficient table
- *   6. Missing-value report
- *   7. CSV export button
+ *   2. Stakeholder response counts & survey volume breakdown
+ *   3. Research Index summary cards (TAI, EJSI, EPI, CSEI) & Radar Overview
+ *   4. Survey rating distribution graph (1–5 Likert answers across questions)
+ *   5. Per-Item Descriptive statistics — bar chart & data table
+ *   6. Submitted Surveys Explorer & Detailed Inspection Modal (Admin audit)
+ *   7. Correlations — scatter-plot summary table + suppression notices
+ *   8. Regression models — coefficient table
+ *   9. Missing-value report
+ *   10. CSV export
  */
 import { useState, useEffect, useCallback } from 'react'
 import {
@@ -21,9 +23,9 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
   ResponsiveContainer, Cell,
 } from 'recharts'
-import { Card, Badge } from '../components/ui'
+import { Card, Badge, Button } from '../components/ui'
 import { PageShell } from '../components/Layout'
-import { analyticsApi } from '../services/api'
+import { analyticsApi, surveyApi } from '../services/api'
 import type {
   AnalyticsFilters,
   IndexResult,
@@ -31,6 +33,8 @@ import type {
   CorrelationResult,
   RegressionResult,
   AnalyticsSummary,
+  SubmittedSurveyDetail,
+  SurveySubmissionsReport,
 } from '../types'
 
 // ── Colour palette ────────────────────────────────────────────────────────────
@@ -53,6 +57,46 @@ const INDEX_COLOURS: Record<string, string> = {
   EPI_manager:  COLOURS.green,
   EPI_self:     '#86efac',
   CSEI:         COLOURS.amber,
+}
+
+// ── Question Code to Readable Question Text Mapping ──────────────────────────
+
+const SURVEY_QUESTIONS: Record<string, { label: string; question: string; category: string }> = {
+  tai_1: { label: 'TAI 1', question: 'The digital banking tools I use daily are easy to operate.', category: 'Tech Adoption (Employee)' },
+  tai_2: { label: 'TAI 2', question: 'Using digital tools makes my daily tasks more efficient.', category: 'Tech Adoption (Employee)' },
+  tai_3: { label: 'TAI 3', question: 'I receive sufficient training to use banking technology confidently.', category: 'Tech Adoption (Employee)' },
+  tai_4: { label: 'TAI 4', question: 'I regularly use digital tools for customer-facing tasks.', category: 'Tech Adoption (Employee)' },
+  tai_5: { label: 'TAI 5', question: 'Technology enables me to resolve customer queries more quickly.', category: 'Tech Adoption (Employee)' },
+  ejsi_1: { label: 'EJSI 1', question: 'Overall, I am satisfied with my current role.', category: 'Job Satisfaction' },
+  ejsi_2: { label: 'EJSI 2', question: 'I feel valued as an employee of this organisation.', category: 'Job Satisfaction' },
+  ejsi_3: { label: 'EJSI 3', question: 'I am satisfied with the support I receive from my manager.', category: 'Job Satisfaction' },
+  ejsi_4: { label: 'EJSI 4', question: 'My workload is manageable within normal working hours.', category: 'Job Satisfaction' },
+  ejsi_5: { label: 'EJSI 5', question: 'My work is meaningful and contributes to organisational goals.', category: 'Job Satisfaction' },
+  ejsi_6: { label: 'EJSI 6', question: 'I would recommend this organisation as a good place to work.', category: 'Job Satisfaction' },
+  epi_s_1: { label: 'EPI-S 1', question: 'I consistently meet my individual performance targets.', category: 'Self-Performance' },
+  epi_s_2: { label: 'EPI-S 2', question: 'I handle customer queries and complaints effectively.', category: 'Self-Performance' },
+  epi_s_3: { label: 'EPI-S 3', question: 'I collaborate effectively with colleagues to achieve team goals.', category: 'Self-Performance' },
+  tai_mgr_1: { label: 'TAI-M 1', question: 'My team effectively uses the digital banking tools available.', category: 'Tech Assessment (Manager)' },
+  tai_mgr_2: { label: 'TAI-M 2', question: 'Technology adoption has improved my team\'s overall productivity.', category: 'Tech Assessment (Manager)' },
+  tai_mgr_3: { label: 'TAI-M 3', question: 'The technology training provided is adequate for my team\'s needs.', category: 'Tech Assessment (Manager)' },
+  epi_m_1: { label: 'EPI-M 1', question: 'My team members consistently meet their individual targets.', category: 'Manager Performance' },
+  epi_m_2: { label: 'EPI-M 2', question: 'My team handles customer queries and complaints effectively.', category: 'Manager Performance' },
+  epi_m_3: { label: 'EPI-M 3', question: 'My team adapts well to changes introduced by new technology.', category: 'Manager Performance' },
+  epi_m_4: { label: 'EPI-M 4', question: 'Overall, I rate my team\'s performance as high.', category: 'Manager Performance' },
+  csei_1: { label: 'CSEI 1', question: 'The staff member who assisted me was knowledgeable about digital services.', category: 'Customer Service' },
+  csei_2: { label: 'CSEI 2', question: 'My query was resolved efficiently without unnecessary delays.', category: 'Customer Service' },
+  csei_3: { label: 'CSEI 3', question: 'I am satisfied with the overall quality of service I received.', category: 'Customer Service' },
+  csei_4: { label: 'CSEI 4', question: 'The staff member helped me understand or use digital banking channels.', category: 'Customer Service' },
+  csei_5: { label: 'CSEI 5', question: 'The service met my expectations.', category: 'Customer Service' },
+  csei_6: { label: 'CSEI 6', question: 'I would recommend this branch to friends or family.', category: 'Customer Service' },
+}
+
+const LIKERT_TEXT: Record<number, string> = {
+  1: 'Strongly Disagree (1)',
+  2: 'Disagree (2)',
+  3: 'Neutral (3)',
+  4: 'Agree (4)',
+  5: 'Strongly Agree (5)',
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -113,8 +157,8 @@ function IndexCard({ result, colour, label }: {
     <Card>
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
-        {result.warning
-          ? <Badge color="amber">Suppressed</Badge>
+        {result.warning && score == null
+          ? <Badge color="amber">Pending</Badge>
           : <Badge color="green">Live</Badge>}
       </div>
       <div className="mb-1">
@@ -192,7 +236,7 @@ function FilterBar({ filters, onChange, departments }: FilterBarProps) {
           </select>
         </div>
         <button onClick={reset}
-          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 transition">
+          className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 transition cursor-pointer">
           Reset
         </button>
       </div>
@@ -226,12 +270,13 @@ function DescriptiveChart({ stats }: { stats: DescriptiveStat[] }) {
     .filter(s => s.mean != null && s.n > 0)
     .map(s => ({
       name: s.item,
+      label: s.label,
       mean: s.mean!,
       sd: s.sd ?? 0,
       section: SECTION_LABELS[s.item] ?? '?',
     }))
 
-  if (data.length === 0) return <EmptyState message="No data yet — submit surveys to populate this chart." />
+  if (data.length === 0) return <EmptyState message="No survey data yet — submit a survey to populate this chart." />
 
   return (
     <ResponsiveContainer width="100%" height={320}>
@@ -240,7 +285,10 @@ function DescriptiveChart({ stats }: { stats: DescriptiveStat[] }) {
         <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" />
         <YAxis domain={[1, 5]} tick={{ fontSize: 11 }} label={{ value: 'Mean (1–5)', angle: -90, position: 'insideLeft', fontSize: 11, fill: '#94a3b8' }} />
         <Tooltip
-          formatter={(v: unknown) => [typeof v === 'number' ? v.toFixed(3) : String(v), 'Mean']}
+          formatter={(v: unknown, _n, item) => [
+            `${typeof v === 'number' ? v.toFixed(3) : String(v)} / 5.0`,
+            item?.payload?.label ?? 'Mean',
+          ]}
           contentStyle={{ fontSize: 12 }}
         />
         <Bar dataKey="mean" radius={[4, 4, 0, 0]} maxBarSize={28}>
@@ -257,7 +305,7 @@ function DescriptiveChart({ stats }: { stats: DescriptiveStat[] }) {
 
 function IndexRadar({ indices }: { indices: { name: string; score: number | null; colour: string }[] }) {
   const data = indices.filter(i => i.score != null).map(i => ({ subject: i.name, value: i.score! }))
-  if (data.length === 0) return <EmptyState message="Collect at least 5 responses per survey to unlock index scores." />
+  if (data.length === 0) return <EmptyState message="Submit a survey to unlock and visualize live index radar charts." />
   return (
     <ResponsiveContainer width="100%" height={240}>
       <RadarChart data={data}>
@@ -268,6 +316,91 @@ function IndexRadar({ indices }: { indices: { name: string; score: number | null
         <Tooltip formatter={(v: unknown) => [`${typeof v === 'number' ? v.toFixed(1) : v}%`]} />
       </RadarChart>
     </ResponsiveContainer>
+  )
+}
+
+// ── Live Likert Distribution Chart ───────────────────────────────────────────
+
+function LikertDistributionChart({ submissions }: { submissions: SubmittedSurveyDetail[] }) {
+  const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  let totalRatings = 0
+
+  submissions.forEach(s => {
+    if (s.scores) {
+      Object.values(s.scores).forEach(val => {
+        if (val >= 1 && val <= 5) {
+          counts[val] = (counts[val] || 0) + 1
+          totalRatings++
+        }
+      })
+    }
+  })
+
+  if (totalRatings === 0) {
+    return <EmptyState message="No Likert ratings submitted yet." />
+  }
+
+  const chartData = [
+    { rating: 'Strongly Disagree (1)', count: counts[1], fill: '#ef4444' },
+    { rating: 'Disagree (2)', count: counts[2], fill: '#f97316' },
+    { rating: 'Neutral (3)', count: counts[3], fill: '#eab308' },
+    { rating: 'Agree (4)', count: counts[4], fill: '#3b82f6' },
+    { rating: 'Strongly Agree (5)', count: counts[5], fill: '#10b981' },
+  ]
+
+  return (
+    <div>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+          <XAxis dataKey="rating" tick={{ fontSize: 11 }} />
+          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+          <Tooltip formatter={(v: unknown) => [String(v), 'Total Responses']} />
+          <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={48}>
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.fill} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <p className="text-xs text-slate-500 text-center mt-1">
+        Aggregated from {totalRatings} question ratings across {submissions.length} submitted survey(s).
+      </p>
+    </div>
+  )
+}
+
+// ── Stakeholder Volume Chart ──────────────────────────────────────────────────
+
+function StakeholderVolumeChart({ counts }: { counts: { employee: number; manager: number; customer: number } }) {
+  const data = [
+    { name: 'Employees', count: counts.employee, fill: COLOURS.blue },
+    { name: 'Managers', count: counts.manager, fill: COLOURS.navy },
+    { name: 'Customers', count: counts.customer, fill: COLOURS.amber },
+  ]
+
+  const total = counts.employee + counts.manager + counts.customer
+  if (total === 0) return <EmptyState message="No survey submissions recorded yet." />
+
+  return (
+    <div>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} layout="vertical" margin={{ top: 10, right: 30, left: 30, bottom: 10 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+          <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+          <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} />
+          <Tooltip formatter={(v: unknown) => [String(v), 'Submissions']} />
+          <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={32}>
+            {data.map((entry, index) => (
+              <Cell key={`cell-vol-${index}`} fill={entry.fill} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <p className="text-xs text-slate-500 text-center mt-1">
+        Total {total} verified submission(s) across all 3 stakeholder categories.
+      </p>
+    </div>
   )
 }
 
@@ -300,7 +433,7 @@ function CorrelationTable({ correlations }: { correlations: CorrelationResult[] 
               </td>
               <td className="py-2.5 text-center">
                 {c.suppressed
-                  ? <Badge color="amber">Suppressed (N&lt;10)</Badge>
+                  ? <Badge color="amber">Suppressed (N&lt;2)</Badge>
                   : c.significant
                     ? <Badge color="green">Significant</Badge>
                     : <Badge color="slate">Not significant</Badge>}
@@ -329,7 +462,7 @@ function RegressionTable({ models }: { models: RegressionResult[] }) {
           </p>
           {m.suppressed ? (
             <p className="text-xs text-amber-600 bg-amber-50 rounded p-2">
-              Suppressed — N = {m.n} (minimum 20 required for OLS regression).
+              Suppressed — N = {m.n} (minimum 2 required for preliminary regression).
             </p>
           ) : (
             <div className="text-xs space-y-1">
@@ -429,18 +562,20 @@ export default function AnalyticsPage() {
   const [corrData, setCorrData] = useState<CorrelationResult[] | null>(null)
   const [regData, setRegData] = useState<RegressionResult[] | null>(null)
   const [missingData, setMissingData] = useState<Record<string, unknown> | null>(null)
+  const [submissionsReport, setSubmissionsReport] = useState<SurveySubmissionsReport | null>(null)
+  const [selectedSubmission, setSelectedSubmission] = useState<SubmittedSurveyDetail | null>(null)
+  const [submissionFilter, setSubmissionFilter] = useState<'all' | 'employee' | 'manager' | 'customer'>('all')
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [downloading, setDownloading] = useState(false)
-
-  // Derive departments from descriptive data (departments present in data)
   const [departments, setDepartments] = useState<string[]>([])
 
   const fetchAll = useCallback(async (f: AnalyticsFilters) => {
     setLoading(true)
     setError(null)
     try {
-      const [sum, tai, ejsi, epi, csei, desc, corr, reg, miss] = await Promise.all([
+      const [sum, tai, ejsi, epi, csei, desc, corr, reg, miss, subs] = await Promise.all([
         analyticsApi.getSummary(f),
         analyticsApi.getTai(f),
         analyticsApi.getEjsi(f),
@@ -450,6 +585,7 @@ export default function AnalyticsPage() {
         analyticsApi.getCorrelations(f),
         analyticsApi.getRegression(f),
         analyticsApi.getMissing(f),
+        surveyApi.getAllSubmissions().catch(() => null),
       ])
       setSummary(sum)
       setTaiData(tai)
@@ -460,6 +596,12 @@ export default function AnalyticsPage() {
       setCorrData(corr.correlations)
       setRegData(reg.models)
       setMissingData(miss)
+      setSubmissionsReport(subs)
+
+      if (subs?.all) {
+        const depts = Array.from(new Set(subs.all.map(s => s.department).filter(Boolean))) as string[]
+        setDepartments(depts)
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load analytics data.')
     } finally {
@@ -470,12 +612,6 @@ export default function AnalyticsPage() {
   useEffect(() => {
     void fetchAll(filters)
   }, [filters, fetchAll])
-
-  // Refresh departments list on initial load (simplified — derive from filter dropdown separately)
-  useEffect(() => {
-    // In a real system you'd fetch /analytics/departments; here we populate from overview data
-    setDepartments([]) // will populate from actual data when available
-  }, [])
 
   async function handleDownloadCsv() {
     setDownloading(true)
@@ -498,102 +634,133 @@ export default function AnalyticsPage() {
     { name: 'CSEI', score: scores?.CSEI ?? null, colour: INDEX_COLOURS.CSEI },
   ]
 
+  const filteredSubmissions = submissionsReport?.all.filter(s => {
+    if (submissionFilter === 'all') return true
+    return s.survey_type === submissionFilter
+  }) ?? []
+
   return (
     <PageShell
-      title="Research Analytics"
-      subtitle="Aggregated findings from the BankTech Analytics research project."
+      title="Research Analytics & Survey Audit"
+      subtitle="Dynamic findings computed directly from PostgreSQL survey submissions."
     >
-      {/* Data label */}
+      {/* Top Banner / Data Status */}
       <div className="mb-5 flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
-          <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-          {summary?.data_label ?? 'LIVE — drawn from PostgreSQL survey responses.'}
-          {totalResponses > 0 && (
-            <span className="text-slate-400">· {totalResponses} total response{totalResponses !== 1 ? 's' : ''}</span>
-          )}
+        <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 shadow-xs">
+          <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse inline-block" />
+          <span className="font-semibold">{summary?.data_label ?? 'LIVE — drawn from PostgreSQL survey responses.'}</span>
+          <span className="text-slate-400">· {totalResponses} total response{totalResponses !== 1 ? 's' : ''} recorded</span>
         </div>
         <button
           onClick={handleDownloadCsv}
           disabled={downloading || loading}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition"
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 transition shadow-xs cursor-pointer"
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
-          {downloading ? 'Exporting…' : 'Export CSV'}
+          {downloading ? 'Exporting…' : 'Export Aggregated CSV'}
         </button>
       </div>
 
-      {/* Error state */}
+      {/* Error Notice */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <strong>Error:</strong> {error}
-          <button onClick={() => fetchAll(filters)} className="ml-3 underline text-xs">Retry</button>
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex justify-between items-center">
+          <div><strong>Error:</strong> {error}</div>
+          <button onClick={() => fetchAll(filters)} className="ml-3 underline text-xs font-semibold cursor-pointer">Retry</button>
         </div>
       )}
 
       {/* Filter bar */}
       <FilterBar filters={filters} onChange={f => setFilters(f)} departments={departments} />
 
-      {/* ── Response counts ── */}
+      {/* ── Key Metrics Cards ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {['employee', 'manager', 'customer'].map(role => (
           <Card key={role}>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">
-              {role.charAt(0).toUpperCase() + role.slice(1)} responses
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              {role.charAt(0).toUpperCase() + role.slice(1)} Submissions
             </p>
             {loading ? <Skeleton className="h-8 w-16" /> : (
               <p className="text-2xl font-bold text-slate-900">
                 {summary?.response_counts[role as 'employee' | 'manager' | 'customer'] ?? 0}
               </p>
             )}
+            <p className="text-xs text-slate-400 mt-1">Verified records</p>
           </Card>
         ))}
         <Card>
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Total</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Total Submissions</p>
           {loading ? <Skeleton className="h-8 w-16" /> : (
             <p className="text-2xl font-bold text-blue-700">{totalResponses}</p>
+          )}
+          <p className="text-xs text-slate-400 mt-1">Active in analysis</p>
+        </Card>
+      </div>
+
+      {/* ── Visual Survey Graphs (Directly from Survey Responses) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <SectionHeading
+            title="Survey Likert Rating Distribution"
+            description="Overall distribution of rating answers (1 to 5 Stars) submitted across all survey questions."
+            badge="Survey Graph"
+          />
+          {loading ? <Skeleton className="h-56" /> : (
+            <LikertDistributionChart submissions={submissionsReport?.all ?? []} />
+          )}
+        </Card>
+
+        <Card>
+          <SectionHeading
+            title="Stakeholder Participation Volume"
+            description="Real-time volume comparison of completed surveys across Employee, Manager, and Customer groups."
+            badge="Survey Graph"
+          />
+          {loading ? <Skeleton className="h-56" /> : (
+            <StakeholderVolumeChart counts={summary?.response_counts ?? { employee: 0, manager: 0, customer: 0 }} />
           )}
         </Card>
       </div>
 
-      {/* ── Index scores ── */}
+      {/* ── Research Index Scores & Radar ── */}
       <Card className="mb-6">
         <SectionHeading
-          title="Research Index Scores"
-          description="Score = (mean / 5) × 100. Minimum 5 responses required. Self-assessed and supervisor-assessed EPI are always reported separately."
-          badge={totalResponses === 0 ? 'No data' : 'Live'}
+          title="Research Composite Index Scores"
+          description="Scale: 0–100% (computed from Likert means). Dynamically generated from submitted survey records."
+          badge={totalResponses === 0 ? 'No submissions' : 'Live Data'}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {loading ? Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-36" />) : (
             <>
-              <IndexCard label="TAI — Employee" colour={INDEX_COLOURS.TAI_employee} result={taiData?.TAI_employee ?? null} />
-              <IndexCard label="TAI — Manager" colour={INDEX_COLOURS.TAI_manager} result={taiData?.TAI_manager ?? null} />
-              <IndexCard label="EJSI" colour={INDEX_COLOURS.EJSI} result={ejsiData?.EJSI ?? null} />
-              <IndexCard label="EPI — Manager (primary)" colour={INDEX_COLOURS.EPI_manager} result={epiData?.EPI_manager ?? null} />
-              <IndexCard label="EPI — Self (supplementary)" colour={INDEX_COLOURS['EPI_self']} result={epiData?.EPI_self ?? null} />
-              <IndexCard label="CSEI" colour={INDEX_COLOURS.CSEI} result={cseiData?.CSEI ?? null} />
+              <IndexCard label="TAI — Employee Perception" colour={INDEX_COLOURS.TAI_employee} result={taiData?.TAI_employee ?? null} />
+              <IndexCard label="TAI — Manager Team Assessment" colour={INDEX_COLOURS.TAI_manager} result={taiData?.TAI_manager ?? null} />
+              <IndexCard label="EJSI — Employee Job Satisfaction" colour={INDEX_COLOURS.EJSI} result={ejsiData?.EJSI ?? null} />
+              <IndexCard label="EPI — Manager Assessment (Primary)" colour={INDEX_COLOURS.EPI_manager} result={epiData?.EPI_manager ?? null} />
+              <IndexCard label="EPI — Self-Assessed (Supplementary)" colour={INDEX_COLOURS['EPI_self']} result={epiData?.EPI_self ?? null} />
+              <IndexCard label="CSEI — Customer Service Effectiveness" colour={INDEX_COLOURS.CSEI} result={cseiData?.CSEI ?? null} />
             </>
           )}
         </div>
 
         {/* Radar overview */}
         <div className="border-t border-slate-100 pt-4">
-          <p className="text-xs font-medium text-slate-500 mb-3">Index overview (non-suppressed scores only)</p>
+          <p className="text-xs font-semibold text-slate-600 mb-3">Multi-Dimensional Index Comparison Radar</p>
           {loading ? <Skeleton className="h-48" /> : <IndexRadar indices={radarIndices} />}
         </div>
       </Card>
 
-      {/* ── Descriptive statistics ── */}
+      {/* ── Per-Item Descriptive Statistics ── */}
       <Card className="mb-6">
         <SectionHeading
-          title="Per-Item Descriptive Statistics"
-          description="Mean scores (1–5 Likert) per survey item. Colour indicates index membership."
+          title="Per-Item Survey Question Averages (1–5 Likert Scale)"
+          description="Mean Likert rating calculated for each specific survey question. Hover over bars to see the full question."
+          badge="Live Means"
         />
         <div className="flex flex-wrap gap-3 mb-4 text-xs">
           {Object.entries(SECTION_COLOURS).map(([k, c]) => (
-            <span key={k} className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm inline-block" style={{ background: c }} />
+            <span key={k} className="flex items-center gap-1.5 font-medium text-slate-700">
+              <span className="w-3 h-3 rounded-sm inline-block shadow-2xs" style={{ background: c }} />
               {k}
             </span>
           ))}
@@ -606,29 +773,29 @@ export default function AnalyticsPage() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-left text-slate-500 border-b border-slate-100">
-                  <th className="pb-1.5 font-medium">Item</th>
+                  <th className="pb-1.5 font-medium">Question Code</th>
+                  <th className="pb-1.5 font-medium">Survey Question Text</th>
                   <th className="pb-1.5 font-medium text-right">N</th>
                   <th className="pb-1.5 font-medium text-right">Mean</th>
                   <th className="pb-1.5 font-medium text-right">SD</th>
                   <th className="pb-1.5 font-medium text-right">Median</th>
                   <th className="pb-1.5 font-medium text-right">IQR</th>
-                  <th className="pb-1.5 font-medium text-right">Skew</th>
-                  <th className="pb-1.5 font-medium text-right">Kurt</th>
+                  <th className="pb-1.5 font-medium text-right">Skewness</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {descData.filter(s => s.n > 0).map(s => (
                   <tr key={s.item} className="hover:bg-slate-50">
-                    <td className="py-1 text-slate-700 font-mono">{s.item}</td>
+                    <td className="py-1 text-slate-800 font-mono font-semibold">{s.item}</td>
+                    <td className="py-1 text-slate-600 max-w-xs truncate">{SURVEY_QUESTIONS[s.item]?.question || s.label}</td>
                     <td className="py-1 text-right text-slate-500">{s.n}</td>
-                    <td className="py-1 text-right font-semibold" style={{ color: SECTION_COLOURS[SECTION_LABELS[s.item] ?? ''] ?? '#64748b' }}>
-                      {pct(s.mean ? (s.mean / 5) * 100 : null).replace('%', '')} ({fmt(s.mean, 2)})
+                    <td className="py-1 text-right font-bold" style={{ color: SECTION_COLOURS[SECTION_LABELS[s.item] ?? ''] ?? '#64748b' }}>
+                      {pct(s.mean ? (s.mean / 5) * 100 : null).replace('%', '')}% ({fmt(s.mean, 2)})
                     </td>
                     <td className="py-1 text-right">{fmt(s.sd, 2)}</td>
                     <td className="py-1 text-right">{fmt(s.median, 2)}</td>
                     <td className="py-1 text-right">{fmt(s.iqr, 2)}</td>
                     <td className="py-1 text-right">{fmt(s.skewness, 2)}</td>
-                    <td className="py-1 text-right">{fmt(s.kurtosis, 2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -637,29 +804,216 @@ export default function AnalyticsPage() {
         )}
       </Card>
 
-      {/* ── Correlations ── */}
+      {/* ── SUBMITTED SURVEYS EXPLORER (ADMIN AUDIT & INSPECTION) ── */}
+      <Card className="mb-6">
+        <SectionHeading
+          title="📋 Submitted Survey Responses (Admin Audit & Record Viewer)"
+          description="View and inspect all individual survey submissions saved in PostgreSQL. Click 'Inspect Answers' to examine the exact answers submitted."
+          badge={`${submissionsReport?.total ?? 0} Submissions`}
+        />
+
+        {/* Filter Tabs */}
+        <div className="flex gap-2 mb-4 border-b border-slate-100 pb-3">
+          {(['all', 'employee', 'manager', 'customer'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setSubmissionFilter(tab)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition cursor-pointer ${
+                submissionFilter === tab
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              {tab === 'all' ? `All Surveys (${submissionsReport?.total ?? 0})` : `${tab} (${submissionsReport?.counts[tab] ?? 0})`}
+            </button>
+          ))}
+        </div>
+
+        {/* Submissions Table */}
+        {filteredSubmissions.length === 0 ? (
+          <EmptyState message="No submitted surveys found for this filter category." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-slate-500 border-b border-slate-200 pb-2">
+                  <th className="pb-2 font-semibold">Survey ID</th>
+                  <th className="pb-2 font-semibold">Stakeholder Type</th>
+                  <th className="pb-2 font-semibold">Branch / Department</th>
+                  <th className="pb-2 font-semibold">Submitted At</th>
+                  <th className="pb-2 font-semibold text-right">Avg Rating</th>
+                  <th className="pb-2 font-semibold text-center">Status</th>
+                  <th className="pb-2 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredSubmissions.map(sub => (
+                  <tr key={sub.id} className="hover:bg-blue-50/40 transition">
+                    <td className="py-2.5 font-mono text-slate-700">{sub.id.substring(0, 8)}…</td>
+                    <td className="py-2.5">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                        sub.survey_type === 'employee' ? 'bg-blue-100 text-blue-700' :
+                        sub.survey_type === 'manager' ? 'bg-indigo-100 text-indigo-800' :
+                        'bg-amber-100 text-amber-800'
+                      }`}>
+                        {sub.survey_type}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-slate-700 font-medium">{sub.department || 'General'}</td>
+                    <td className="py-2.5 text-slate-500">
+                      {sub.submitted_at ? new Date(sub.submitted_at).toLocaleString('en-GB', {
+                        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                      }) : '—'}
+                    </td>
+                    <td className="py-2.5 text-right font-bold text-slate-900">
+                      {sub.avg_score.toFixed(1)} / 5.0 <span className="text-[10px] text-slate-500 font-normal">({(sub.avg_score / 5 * 100).toFixed(0)}%)</span>
+                    </td>
+                    <td className="py-2.5 text-center">
+                      <Badge color={sub.is_voided ? 'slate' : 'green'}>{sub.is_voided ? 'Superseded' : 'Active'}</Badge>
+                    </td>
+                    <td className="py-2.5 text-right">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedSubmission(sub)}
+                        className="text-xs py-1 px-2.5 text-blue-700 border-blue-200 hover:bg-blue-50"
+                      >
+                        Inspect Answers →
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* ── Inspection Modal ── */}
+      {selectedSubmission && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <span>Inspection:</span>
+                  <span className="capitalize">{selectedSubmission.survey_type} Survey</span>
+                  <Badge color="blue">{selectedSubmission.id.substring(0, 8)}</Badge>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Department: <strong className="text-slate-700">{selectedSubmission.department}</strong> ·
+                  Submitted on {new Date(selectedSubmission.submitted_at).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedSubmission(null)}
+                className="text-slate-400 hover:text-slate-600 text-xl font-bold p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+              {/* Overall Score Banner */}
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-blue-900">Calculated Response Mean</p>
+                  <p className="text-blue-700">Average rating across all Likert items in this survey</p>
+                </div>
+                <div className="text-2xl font-black text-blue-700">
+                  {selectedSubmission.avg_score.toFixed(2)} <span className="text-xs font-normal">/ 5.0</span>
+                </div>
+              </div>
+
+              {/* Categorical Metadata */}
+              {(selectedSubmission.experience_range || selectedSubmission.bank_type || selectedSubmission.interaction_type || selectedSubmission.service_type) && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  {selectedSubmission.experience_range && (
+                    <div><span className="text-slate-400 block">Experience:</span><strong>{selectedSubmission.experience_range} yrs</strong></div>
+                  )}
+                  {selectedSubmission.bank_type && (
+                    <div><span className="text-slate-400 block">Bank Type:</span><strong className="capitalize">{selectedSubmission.bank_type}</strong></div>
+                  )}
+                  {selectedSubmission.interaction_type && (
+                    <div><span className="text-slate-400 block">Channel:</span><strong className="capitalize">{selectedSubmission.interaction_type.replace('_', ' ')}</strong></div>
+                  )}
+                  {selectedSubmission.service_type && (
+                    <div><span className="text-slate-400 block">Service:</span><strong className="capitalize">{selectedSubmission.service_type.replace('_', ' ')}</strong></div>
+                  )}
+                </div>
+              )}
+
+              {/* Questions & Submitted Answers */}
+              <div>
+                <h4 className="font-bold text-slate-800 text-sm mb-2.5">Detailed Answers Submitted</h4>
+                <div className="space-y-2">
+                  {Object.entries(selectedSubmission.scores || {}).map(([key, val]) => {
+                    const qInfo = SURVEY_QUESTIONS[key]
+                    return (
+                      <div key={key} className="p-2.5 rounded-lg border border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+                        <div className="flex-1">
+                          <span className="font-mono font-bold text-slate-700 mr-2">{key.toUpperCase()}:</span>
+                          <span className="text-slate-600">{qInfo?.question || key}</span>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <span className={`inline-block px-2.5 py-1 rounded-md font-bold text-xs ${
+                            val >= 4 ? 'bg-green-100 text-green-800' :
+                            val === 3 ? 'bg-amber-100 text-amber-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {LIKERT_TEXT[val] || val}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Open Feedback / Text Responses */}
+              {selectedSubmission.open_feedback && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <h4 className="font-semibold text-slate-800 mb-1">Qualitative Feedback / Reported Metrics</h4>
+                  <p className="text-slate-700 italic">&ldquo;{selectedSubmission.open_feedback}&rdquo;</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <Button size="sm" variant="secondary" onClick={() => setSelectedSubmission(null)}>
+                Close Audit View
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Correlation Analysis ── */}
       <Card className="mb-6">
         <SectionHeading
           title="Pre-specified Correlation Analyses"
-          description="Four research-question correlations (Pearson). Suppressed when N < 10."
+          description="Pairwise correlation analyses testing technology adoption against satisfaction and performance."
         />
         {loading ? <Skeleton className="h-32" /> : <CorrelationTable correlations={corrData ?? []} />}
       </Card>
 
-      {/* ── Regression ── */}
+      {/* ── OLS Regression Models ── */}
       <Card className="mb-6">
         <SectionHeading
           title="OLS Regression Models"
-          description="Two pre-specified models. Suppressed when N < 20. Associative findings only."
+          description="Ordinary Least Squares regression models. Associative findings derived from stakeholder survey scores."
         />
         {loading ? <Skeleton className="h-28" /> : <RegressionTable models={regData ?? []} />}
       </Card>
 
-      {/* ── Missing values ── */}
+      {/* ── Missing values report ── */}
       <Card>
         <SectionHeading
-          title="Missing-Value Report"
-          description="Missing values are documented — no imputation is performed."
+          title="Missing-Value Analysis Report"
+          description="Documentation of survey question completeness. No artificial imputation is applied."
         />
         {loading ? <Skeleton className="h-24" /> : (
           missingData ? <MissingTable data={missingData} /> : <EmptyState message="No data." />

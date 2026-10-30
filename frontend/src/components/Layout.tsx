@@ -152,7 +152,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-6 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-500">
-          <p>© 2024 BankTech Analytics Research Project. Academic use only.</p>
+          <p>© 2026 BankTech Analytics Research Project. Academic use only.</p>
           <div className="flex gap-4">
             <Link to="/methodology" className="hover:text-slate-700">Methodology</Link>
             <Link to="/privacy" className="hover:text-slate-700">Privacy</Link>

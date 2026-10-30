@@ -41,7 +41,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white via-transparent to-transparent pointer-events-none" />
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 text-center relative">
           <span className="inline-block mb-4 px-4 py-1.5 rounded-full bg-blue-600/40 border border-blue-400/30 text-blue-200 text-sm font-medium tracking-wide">
-            Academic Research Project · 2024
+            Academic Research Project · 2026
           </span>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight mb-6">
             BankTech Analytics
