@@ -26,6 +26,13 @@ const generateId = () => {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 }
 
+function formatTime(timestamp: Date | string | number | undefined): string {
+  if (!timestamp) return ''
+  const d = timestamp instanceof Date ? timestamp : new Date(timestamp)
+  if (isNaN(d.getTime()) || d.getTime() === 0) return ''
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
 class FaqErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: ReactNode }) {
     super(props)
@@ -179,12 +186,12 @@ function MessageBubble({
               Thinking…
             </span>
           ) : (
-            msg.content
+            typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '')
           )}
         </div>
 
         {/* Source citations */}
-        {msg.sources && msg.sources.length > 0 && (
+        {Array.isArray(msg.sources) && msg.sources.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1">
             {msg.sources.map((s, i) => (
               <SourceChip key={i} source={s} />
@@ -201,7 +208,7 @@ function MessageBubble({
         )}
 
         {/* Latency */}
-        {msg.latency_ms !== undefined && !msg.isLoading && (
+        {typeof msg.latency_ms === 'number' && !isNaN(msg.latency_ms) && !msg.isLoading && (
           <p className="text-xs text-slate-300 mt-0.5 px-1">
             {msg.latency_ms < 1000
               ? `${Math.round(msg.latency_ms)} ms`
@@ -219,9 +226,7 @@ function MessageBubble({
         )}
 
         <p className="text-xs text-slate-400 mt-1 px-1">
-          {msg.timestamp.getTime() === 0
-            ? ''
-            : msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {formatTime(msg.timestamp)}
         </p>
       </div>
       {isUser && (
@@ -549,9 +554,10 @@ interface FeedbackStats {
 
 function computeFeedback(messages: ChatMessage[]): FeedbackStats {
   const stats: FeedbackStats = { helpful: 0, not_helpful: 0, partially_helpful: 0, total: 0 }
+  if (!Array.isArray(messages)) return stats
   for (const m of messages) {
-    if (m.feedback) {
-      stats[m.feedback]++
+    if (m?.feedback && m.feedback in stats) {
+      stats[m.feedback as keyof FeedbackStats]++
       stats.total++
     }
   }
@@ -617,16 +623,23 @@ function FaqPageInner() {
 
     try {
       const res = await ragApi.query({ question: text, top_k: 5 })
+      const answerText =
+        typeof res?.answer === 'string'
+          ? res.answer
+          : res?.answer
+          ? JSON.stringify(res.answer)
+          : 'I could not retrieve a grounded answer for your question.'
+
       setMessages(prev =>
         prev.map(m =>
           m.id === loadingMsg.id
             ? {
                 ...m,
-                content: res.answer,
-                sources: res.sources,
-                isFallback: !res.is_grounded,
+                content: answerText,
+                sources: Array.isArray(res?.sources) ? res.sources : [],
+                isFallback: !res?.is_grounded,
                 isLoading: false,
-                latency_ms: res.latency_ms,
+                latency_ms: typeof res?.latency_ms === 'number' ? res.latency_ms : undefined,
               }
             : m,
         ),

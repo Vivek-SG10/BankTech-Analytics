@@ -248,7 +248,7 @@ export interface ChatMessage {
   sources?: SourceCitation[]
   isLoading?: boolean
   isFallback?: boolean
-  timestamp: Date
+  timestamp: Date | string
   latency_ms?: number
   feedback?: 'helpful' | 'not_helpful' | 'partially_helpful'
 }
