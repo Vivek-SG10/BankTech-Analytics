@@ -647,20 +647,14 @@ function FaqPageInner() {
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : 'Unknown error'
 
-      // Service-level errors (503, network)
-      if (errMsg.includes('503') || errMsg.includes('network') || errMsg.includes('fetch')) {
-        setApiError(`Service unavailable: ${errMsg}. The RAG backend may not be running or the API key is not configured.`)
-      }
+      setApiError(errMsg)
 
       setMessages(prev =>
         prev.map(m =>
           m.id === loadingMsg.id
             ? {
                 ...m,
-                content:
-                  errMsg.includes('503')
-                    ? 'The FAQ service is temporarily unavailable. Please try again later or contact your bank directly.'
-                    : `Sorry, I encountered an error processing your question. Please try again.`,
+                content: `Sorry, I encountered an error processing your question: ${errMsg}. Please try again.`,
                 isLoading: false,
                 isFallback: true,
               }

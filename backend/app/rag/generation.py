@@ -91,10 +91,20 @@ async def _generate_gemini(user_message: str, api_key: str) -> str:
             elif res.status_code == 404:
                 continue
             else:
-                logger.error("Gemini API error (%s): %d", model, res.status_code)
+                err_msg = ""
+                try:
+                    err_data = res.json()
+                    err_msg = err_data.get("error", {}).get("message", "")
+                except Exception:
+                    pass
+                msg = f"Gemini API returned status {res.status_code}"
+                if err_msg:
+                    msg += f": {err_msg}"
+                msg += ". Please verify your GEMINI_API_KEY."
+                logger.error("Gemini API error (%s): %s", model, msg)
                 raise HTTPException(
                     status_code=503,
-                    detail=f"Gemini API returned status {res.status_code}. Verify your GEMINI_API_KEY.",
+                    detail=msg,
                 )
         except HTTPException:
             raise

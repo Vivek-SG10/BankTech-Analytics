@@ -53,10 +53,20 @@ async def _embed_gemini(texts: list[str], api_key: str) -> list[list[float]]:
                     headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
                 )
             if res.status_code != 200:
-                logger.error("Gemini Embeddings API error: status=%d", res.status_code)
+                err_msg = ""
+                try:
+                    err_data = res.json()
+                    err_msg = err_data.get("error", {}).get("message", "")
+                except Exception:
+                    pass
+                msg = f"Gemini embedding service returned HTTP {res.status_code}"
+                if err_msg:
+                    msg += f": {err_msg}"
+                msg += ". Please verify your GEMINI_API_KEY."
+                logger.error("Gemini Embeddings API error: %s", msg)
                 raise HTTPException(
                     status_code=503,
-                    detail=f"Gemini embedding service returned HTTP {res.status_code}. Verify your GEMINI_API_KEY.",
+                    detail=msg,
                 )
             data = res.json()
             for item in data.get("embeddings", []):

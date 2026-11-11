@@ -253,13 +253,27 @@ async def query_knowledge_base(
             )
     
     access_tier = _access_level_for_role(actor.role)
+    vs = _get_vector_store()
+    if vs.collection_count() == 0:
+        return QueryResponse(
+            answer=(
+                "The knowledge base is currently empty. "
+                "Please upload approved banking documents (such as FAQ policies) "
+                "in the Knowledge Base Management tab before asking questions."
+            ),
+            sources=[],
+            is_grounded=False,
+            latency_ms=round((time.monotonic() - t0) * 1000, 1),
+        )
     
     try:
         query_emb = await get_query_embedding(body.question, settings.effective_api_key)
-        vs = _get_vector_store()
         raw_chunks = vs.query(query_emb, body.top_k, access_tier)
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Retrieval failed: {type(e).__name__}")
+        logger.exception("Retrieval failed")
+        raise HTTPException(status_code=503, detail=f"Retrieval failed: {str(e)}")
     
     result = await generate_answer(
         question=body.question,
