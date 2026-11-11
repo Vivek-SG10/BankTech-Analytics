@@ -75,6 +75,21 @@ class Settings(BaseSettings):
 
 
 @lru_cache
-def get_settings() -> Settings:
-    """Cached settings singleton — safe to call anywhere."""
+def _get_cached_settings() -> Settings:
     return Settings()
+
+
+def get_settings() -> Settings:
+    """Cached settings singleton with automatic reload if API key was updated."""
+    s = _get_cached_settings()
+    if not s.effective_api_key:
+        try:
+            from dotenv import find_dotenv, load_dotenv
+            dotenv_path = find_dotenv(usecwd=True)
+            if dotenv_path:
+                load_dotenv(dotenv_path, override=True)
+            _get_cached_settings.cache_clear()
+            s = _get_cached_settings()
+        except Exception:
+            pass
+    return s
