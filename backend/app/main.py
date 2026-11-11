@@ -2,6 +2,7 @@
 BankTech Analytics — FastAPI application entry-point.
 
 Phase 3: Survey submission + research analytics module added.
+Phase 4: RAG-powered Knowledge Base (FAQ) module added.
 Routers are imported at module level so startup errors are immediately visible.
 Heavy optional dependencies (langchain, chromadb) remain guarded.
 """
@@ -27,6 +28,13 @@ except Exception:  # noqa: BLE001
     _api_router = None
     _api_router_available = False
 
+try:
+    from app.rag.router import rag_router as _rag_router
+    _rag_router_available = True
+except Exception:  # noqa: BLE001
+    _rag_router = None
+    _rag_router_available = False
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
@@ -42,9 +50,11 @@ app = FastAPI(
         "**Phase 3:** Survey submission, Technology Adoption Index, "
         "Employee Performance Index, Job Satisfaction Index, "
         "Customer Service Effectiveness Index, descriptive statistics, "
-        "correlation and regression analyses."
+        "correlation and regression analyses.\n\n"
+        "**Phase 4:** RAG-powered Knowledge Base FAQ — upload documents and "
+        "query them with AI-generated, grounded answers."
     ),
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -74,3 +84,5 @@ app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["Research
 # ── Optional Phase-3+ routers ─────────────────────────────────────────────────
 if _api_router_available and _api_router is not None:
     app.include_router(_api_router, prefix="/api/v1", tags=["Analytics & Core API"])
+if _rag_router_available and _rag_router is not None:
+    app.include_router(_rag_router, prefix="/api/v1/rag", tags=["Knowledge Base (RAG)"])

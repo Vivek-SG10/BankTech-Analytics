@@ -46,6 +46,15 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     chroma_persist_directory: str = "./data/chroma_db"
 
+    # RAG configuration
+    rag_chunk_size: int = 800
+    rag_chunk_overlap: int = 150
+    rag_max_file_size_mb: int = 20
+    rag_embed_model: str = "text-embedding-3-small"
+    rag_generation_model: str = "gpt-4o-mini"
+    rag_max_distance: float = 1.5
+    rag_request_timeout: int = 60
+
     # ── CORS ───────────────────────────────────────────────────────────────
     frontend_origin: str = "http://localhost:5173"
 

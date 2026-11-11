@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 # All ORM models must be imported (directly or transitively) before autogenerate.
 from app.auth.models import Base  # noqa: F401 — registers UserOrm with metadata
 import app.surveys.models  # noqa: F401 — registers survey tables with the shared Base
+import app.rag.models  # noqa: F401 — registers KBDocumentOrm with metadata
 
 
 # ── Alembic config ────────────────────────────────────────────────────────────

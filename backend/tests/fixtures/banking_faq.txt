@@ -1,0 +1,112 @@
+BANKTECH ANALYTICS — FREQUENTLY ASKED QUESTIONS (FAQ)
+
+=======================================================
+1. CURRENT ACCOUNT FEES AND MINIMUM BALANCE
+=======================================================
+
+Q: What are the fees associated with a current account?
+A: Current accounts may be subject to monthly maintenance fees, transaction charges, and fees for
+value-added services such as cheque books, demand drafts, and RTGS/NEFT transfers. Fee schedules
+vary by account type (Basic, Premium, Business). Please refer to our official website or visit
+your nearest branch for the latest schedule of charges.
+
+Q: Is there a minimum balance requirement for current accounts?
+A: Yes, current accounts typically carry a minimum average monthly balance (AMB) requirement.
+Failure to maintain the required AMB may attract a non-maintenance charge. The exact AMB
+requirement differs across account variants. Contact your branch or log in to mobile banking
+to view the requirement applicable to your account.
+
+=======================================================
+2. MOBILE BANKING APP FEATURES
+=======================================================
+
+Q: What can I do with the BankTech mobile banking app?
+A: Our mobile banking application allows you to:
+   - View account balances and transaction history
+   - Transfer funds (IMPS, NEFT, RTGS, UPI)
+   - Pay utility bills, insurance premiums, and credit card dues
+   - Open fixed and recurring deposits
+   - Apply for loans and credit cards
+   - Raise and track service requests
+   - Locate ATMs and branches on an interactive map
+   - Set spending alerts and account notifications
+
+Q: Is the mobile banking app available on both Android and iOS?
+A: Yes, the app is available on both the Google Play Store and the Apple App Store. Ensure
+you download the official app to protect your account security.
+
+=======================================================
+3. FIXED DEPOSIT INTEREST RATES
+=======================================================
+
+Q: What interest rates are offered on Fixed Deposits (FDs)?
+A: Fixed deposit interest rates vary based on the tenure of the deposit, the deposit amount, and
+prevailing market conditions set by our Asset-Liability Committee. Preferential rates may be
+available for senior citizens. For the most current and accurate rates, please visit our
+official website or speak to a relationship manager at your nearest branch.
+
+Q: Can interest be paid out monthly or quarterly rather than at maturity?
+A: Yes, payout options (monthly, quarterly, or at maturity) are available for most fixed deposit
+products. The effective yield may differ depending on the payout option selected.
+
+=======================================================
+4. KYC (KNOW YOUR CUSTOMER) REQUIREMENTS
+=======================================================
+
+Q: What documents are needed to complete KYC?
+A: As per regulatory guidelines, all customers must complete KYC verification. Generally accepted
+documents include government-issued photo identity proof (passport, Aadhaar card, voter ID,
+driving licence) and address proof. For businesses, additional documents such as incorporation
+certificates, GST registration, and authorised signatory declarations are required.
+
+Q: Can I complete KYC online (Video KYC)?
+A: Yes, subject to eligibility and regulatory approvals, Video KYC (V-KYC) is available through
+our mobile app and internet banking portal. You will need a stable internet connection, a live
+camera, and your original identity documents during the video call.
+
+=======================================================
+5. DISPUTE RESOLUTION PROCESS
+=======================================================
+
+Q: How do I raise a dispute on an unauthorised transaction?
+A: If you notice an unauthorised or erroneous transaction, report it immediately by:
+   1. Calling our 24×7 customer care helpline
+   2. Submitting a dispute via internet banking or the mobile app
+   3. Visiting your nearest branch with supporting documentation
+Disputes are typically acknowledged within two working days and resolved within the timeframe
+prescribed by the Reserve Bank of India's customer protection guidelines.
+
+Q: What happens after I raise a dispute?
+A: Once a dispute is registered, our investigations team reviews all relevant transaction logs.
+If the dispute is upheld, the amount is credited to your account as per regulatory timelines.
+You will receive updates via SMS and email at each stage of the process.
+
+=======================================================
+6. CONTACT CHANNELS
+=======================================================
+
+Q: How can I contact customer support?
+A: You may reach us through any of the following channels:
+   - Visit our official website for live chat and service request forms
+   - Visit your nearest branch during working hours
+   - Use the in-app Help & Support section for guided assistance
+For the current helpline numbers, email addresses, and branch locator, please visit the official
+website or your nearest branch.
+
+=======================================================
+7. DIGITAL BANKING SECURITY BEST PRACTICES
+=======================================================
+
+Q: How can I keep my account safe while using digital banking?
+A: We strongly recommend the following security practices:
+   - Never share your login credentials, OTPs, or PINs with anyone, including bank staff
+   - Always log out of mobile and internet banking sessions after use
+   - Enable two-factor authentication (2FA) on all digital banking channels
+   - Regularly update your mobile banking app to receive the latest security patches
+   - Avoid accessing your bank account on public or shared Wi-Fi networks
+   - Set up transaction alerts so you are notified of every debit and credit
+   - Verify the authenticity of emails and SMS messages before clicking on links
+   - Report suspicious activity to our customer care team immediately
+
+BankTech Analytics is committed to protecting your financial data. If you suspect your account
+has been compromised, contact us immediately through official channels listed on our website.
