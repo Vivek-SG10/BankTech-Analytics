@@ -10,12 +10,61 @@
  *  - Feedback collection (👍/👎/partial) stored locally per session
  *  - RAG health status indicator
  */
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, Component, type ErrorInfo, type ReactNode } from 'react'
 import { Card, Spinner, Alert, Badge, Button } from '../components/ui'
 import { PageShell } from '../components/Layout'
 import { ragApi } from '../services/api'
 import { useAuth } from '../context/useAuth'
 import type { ChatMessage, SourceCitation, KBDocument } from '../types'
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+}
+
+class FaqErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('FAQ Assistant Error caught by boundary:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <PageShell title="Banking FAQ Assistant" subtitle="AI-powered answers grounded in approved policy documents">
+          <div className="max-w-2xl mx-auto p-6 bg-red-50 border border-red-200 rounded-xl text-center space-y-4">
+            <h3 className="text-lg font-semibold text-red-800">Something went wrong in the FAQ Assistant</h3>
+            <p className="text-sm text-red-600">
+              {this.state.error?.message || 'An unexpected rendering error occurred.'}
+            </p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null })
+                window.location.reload()
+              }}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition"
+            >
+              Reload FAQ Assistant
+            </button>
+          </div>
+        </PageShell>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -41,11 +90,18 @@ const MAX_MB = 20
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function SourceChip({ source }: { source: SourceCitation }) {
-  const label = source.page_or_section
-    ? `${source.title} — ${source.page_or_section}`
-    : source.title
-  const pct = Math.round(source.relevance_score * 100)
+function SourceChip({ source }: { source: SourceCitation | string }) {
+  if (typeof source === 'string') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs border border-blue-200 cursor-default">
+        📄 {source.length > 50 ? `${source.slice(0, 47)}…` : source}
+      </span>
+    )
+  }
+  const title = source?.title || 'Document'
+  const label = source?.page_or_section ? `${title} — ${source.page_or_section}` : title
+  const score = typeof source?.relevance_score === 'number' ? source.relevance_score : 1
+  const pct = Math.round(score * 100)
   return (
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs border border-blue-200 cursor-default"
@@ -504,7 +560,7 @@ function computeFeedback(messages: ChatMessage[]): FeedbackStats {
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 
-export default function FaqPage() {
+function FaqPageInner() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
@@ -541,14 +597,14 @@ export default function FaqPage() {
     const now = new Date(Date.now())
 
     const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       role: 'user',
       content: text,
       timestamp: now,
     }
 
     const loadingMsg: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       role: 'assistant',
       content: '',
       isLoading: true,
@@ -865,5 +921,13 @@ export default function FaqPage() {
         )}
       </div>
     </PageShell>
+  )
+}
+
+export default function FaqPage() {
+  return (
+    <FaqErrorBoundary>
+      <FaqPageInner />
+    </FaqErrorBoundary>
   )
 }
