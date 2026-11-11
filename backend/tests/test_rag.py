@@ -153,9 +153,12 @@ def _high_distance_chunk(doc_id: str, title: str = "Irrelevant Doc") -> dict[str
 
 # ── Settings mock ─────────────────────────────────────────────────────────────
 
-def _mock_settings(openai_api_key: str = _FAKE_API_KEY) -> MagicMock:
+def _mock_settings(api_key: str = _FAKE_API_KEY, openai_api_key: str = None, gemini_api_key: str = None) -> MagicMock:
     s = MagicMock()
-    s.openai_api_key = openai_api_key
+    effective = api_key if openai_api_key is None and gemini_api_key is None else (gemini_api_key or openai_api_key or "")
+    s.gemini_api_key = effective
+    s.openai_api_key = effective
+    s.effective_api_key = effective
     s.chroma_persist_directory = "/tmp/test_chroma"
     s.rag_max_distance = 1.5
     return s

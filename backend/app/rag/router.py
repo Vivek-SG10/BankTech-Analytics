@@ -68,14 +68,14 @@ async def upload_document(
         raise HTTPException(status_code=409, detail="Document with identical content already exists in the knowledge base.")
 
     settings = get_settings()
-    if not settings.openai_api_key:
-        raise HTTPException(status_code=503, detail="LLM API key not configured. Set OPENAI_API_KEY.")
+    if not settings.effective_api_key:
+        raise HTTPException(status_code=503, detail="LLM API key not configured. Set GEMINI_API_KEY (or OPENAI_API_KEY).")
 
     doc_id = str(uuid.uuid4())
     vector_store = _get_vector_store()
 
     async def _embed(texts):
-        return await get_embeddings(texts, settings.openai_api_key)
+        return await get_embeddings(texts, settings.effective_api_key)
 
     result = await ingest_document(
         content=content, filename=file.filename or "upload",
@@ -233,8 +233,8 @@ async def query_knowledge_base(
     t0 = time.monotonic()
     
     settings = get_settings()
-    if not settings.openai_api_key:
-        raise HTTPException(status_code=503, detail="LLM service not configured.")
+    if not settings.effective_api_key:
+        raise HTTPException(status_code=503, detail="LLM service not configured. Set GEMINI_API_KEY.")
     
     from app.rag.embeddings import get_query_embedding
     from app.rag.generation import generate_answer
@@ -255,7 +255,7 @@ async def query_knowledge_base(
     access_tier = _access_level_for_role(actor.role)
     
     try:
-        query_emb = await get_query_embedding(body.question, settings.openai_api_key)
+        query_emb = await get_query_embedding(body.question, settings.effective_api_key)
         vs = _get_vector_store()
         raw_chunks = vs.query(query_emb, body.top_k, access_tier)
     except Exception as e:
@@ -264,7 +264,7 @@ async def query_knowledge_base(
     result = await generate_answer(
         question=body.question,
         retrieved_chunks=raw_chunks,
-        api_key=settings.openai_api_key,
+        api_key=settings.effective_api_key,
     )
     
     # Build source citations
@@ -307,7 +307,7 @@ async def rag_health(db: AsyncSession = Depends(get_db)):
         vs_status = "error"
         vs_details = {"error": type(e).__name__}
     
-    llm_status = "configured" if settings.openai_api_key else "not_configured"
+    llm_status = "configured" if settings.effective_api_key else "not_configured"
     
     # DB check: count documents
     try:

@@ -43,15 +43,30 @@ class Settings(BaseSettings):
         return v
 
     # ── (Phase 1+) LLM / RAG ──────────────────────────────────────────────
+    gemini_api_key: str = ""
     openai_api_key: str = ""
     chroma_persist_directory: str = "./data/chroma_db"
+
+    @property
+    def effective_api_key(self) -> str:
+        """Return GEMINI_API_KEY if set, otherwise fallback to OPENAI_API_KEY."""
+        return self.gemini_api_key or self.openai_api_key
+
+    @property
+    def llm_provider(self) -> str:
+        key = self.effective_api_key
+        if self.gemini_api_key or key.startswith("AIza"):
+            return "gemini"
+        if self.openai_api_key or key.startswith("sk-"):
+            return "openai"
+        return "gemini" if key else "none"
 
     # RAG configuration
     rag_chunk_size: int = 800
     rag_chunk_overlap: int = 150
     rag_max_file_size_mb: int = 20
-    rag_embed_model: str = "text-embedding-3-small"
-    rag_generation_model: str = "gpt-4o-mini"
+    rag_embed_model: str = "text-embedding-004"
+    rag_generation_model: str = "gemini-2.0-flash"
     rag_max_distance: float = 1.5
     rag_request_timeout: int = 60
 

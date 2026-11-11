@@ -55,6 +55,88 @@ UNSUPPORTED_ANSWER: str = (
 )
 
 
+async def _generate_gemini(user_message: str, api_key: str) -> str:
+    """Generate answer using Google Gemini API via httpx."""
+    import httpx
+    for model in ["gemini-2.0-flash", "gemini-1.5-flash"]:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        payload = {
+            "system_instruction": {
+                "parts": [{"text": SYSTEM_PROMPT}]
+            },
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": user_message}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.0
+            }
+        }
+        try:
+            async with httpx.AsyncClient(timeout=GENERATION_TIMEOUT) as client:
+                res = await client.post(
+                    url,
+                    json=payload,
+                    headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+                )
+            if res.status_code == 200:
+                data = res.json()
+                candidates = data.get("candidates", [])
+                if candidates and "content" in candidates[0]:
+                    parts = candidates[0]["content"].get("parts", [])
+                    if parts and "text" in parts[0]:
+                        return parts[0]["text"]
+            elif res.status_code == 404:
+                continue
+            else:
+                logger.error("Gemini API error (%s): %d", model, res.status_code)
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Gemini API returned status {res.status_code}. Verify your GEMINI_API_KEY.",
+                )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("Unexpected error calling Gemini API")
+            raise HTTPException(
+                status_code=503,
+                detail="An unexpected error occurred while generating answer with Gemini.",
+            ) from exc
+
+    return UNSUPPORTED_ANSWER
+
+
+async def _generate_openai(user_message: str, api_key: str) -> str:
+    """Generate answer using OpenAI Chat Completions API."""
+    try:
+        import openai as _openai  # noqa: PLC0415
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=501,
+            detail="openai package is not installed. Use a GEMINI_API_KEY or install openai.",
+        ) from exc
+
+    client = _openai.AsyncOpenAI(api_key=api_key, timeout=GENERATION_TIMEOUT)
+    try:
+        response = await client.chat.completions.create(
+            model=GENERATION_MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
+            temperature=0.0,
+        )
+        return response.choices[0].message.content or UNSUPPORTED_ANSWER
+    except Exception as exc:
+        logger.exception("Unexpected error calling OpenAI API")
+        raise HTTPException(
+            status_code=503,
+            detail="An unexpected error occurred during OpenAI answer generation.",
+        ) from exc
+
+
 # =========================================================================== #
 # Public API                                                                   #
 # =========================================================================== #
@@ -109,20 +191,6 @@ async def generate_answer(
             status_code=503,
             detail="Language model is not configured. Contact your administrator.",
         )
-
-    # ------------------------------------------------------------------ #
-    # Lazy import openai                                                   #
-    # ------------------------------------------------------------------ #
-    try:
-        import openai as _openai  # noqa: PLC0415
-    except ImportError as exc:
-        raise HTTPException(
-            status_code=501,
-            detail=(
-                "openai is required for answer generation but is not installed. "
-                "Install it with:  pip install openai"
-            ),
-        ) from exc
 
     # ------------------------------------------------------------------ #
     # Filter chunks by distance threshold                                  #
@@ -180,39 +248,13 @@ async def generate_answer(
     )
 
     # ------------------------------------------------------------------ #
-    # Call the OpenAI Chat Completions API                                 #
+    # Generate answer via Gemini (default) or OpenAI (if sk- key)         #
     # ------------------------------------------------------------------ #
-    client = _openai.AsyncOpenAI(api_key=api_key, timeout=GENERATION_TIMEOUT)
+    if api_key.startswith("sk-"):
+        answer = await _generate_openai(user_message, api_key)
+    else:
+        answer = await _generate_gemini(user_message, api_key)
 
-    try:
-        response = await client.chat.completions.create(
-            model=GENERATION_MODEL,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.0,  # deterministic; hallucination-minimising
-        )
-    except _openai.OpenAIError as exc:
-        logger.error(
-            "OpenAI Chat Completions error: %s",
-            type(exc).__name__,  # log type only — do NOT log exc details (may echo key)
-        )
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "The language model service is temporarily unavailable. "
-                "Please try again later."
-            ),
-        ) from exc
-    except Exception as exc:
-        logger.exception("Unexpected error calling OpenAI Chat Completions API")
-        raise HTTPException(
-            status_code=503,
-            detail="An unexpected error occurred during answer generation.",
-        ) from exc
-
-    answer: str = response.choices[0].message.content or UNSUPPORTED_ANSWER
     answer = answer.strip()
 
     # ------------------------------------------------------------------ #

@@ -1,8 +1,6 @@
 """
-OpenAI embedding generation for the BankTech RAG knowledge base.
-
-openai is an optional dependency imported lazily; the server starts without it
-and raises a clear error only when embeddings are actually requested.
+Embedding generation for the BankTech RAG knowledge base.
+Supports both Google Gemini (text-embedding-004) and OpenAI (text-embedding-3-small).
 
 Security notes
 --------------
@@ -17,6 +15,7 @@ import logging
 from typing import Any
 
 from fastapi import HTTPException
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +23,86 @@ logger = logging.getLogger(__name__)
 # Constants                                                                    #
 # =========================================================================== #
 
-EMBED_MODEL: str = "text-embedding-3-small"
+GEMINI_EMBED_MODEL: str = "text-embedding-004"
+OPENAI_EMBED_MODEL: str = "text-embedding-3-small"
 EMBED_TIMEOUT: int = 30   # seconds per API call
-EMBED_BATCH_SIZE: int = 100  # texts per OpenAI request
+EMBED_BATCH_SIZE: int = 100
+
+
+async def _embed_gemini(texts: list[str], api_key: str) -> list[list[float]]:
+    """Generate embeddings using Google Gemini API."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_EMBED_MODEL}:batchEmbedContents"
+    all_embeddings: list[list[float]] = []
+
+    for batch_start in range(0, len(texts), EMBED_BATCH_SIZE):
+        batch = texts[batch_start: batch_start + EMBED_BATCH_SIZE]
+        payload = {
+            "requests": [
+                {
+                    "model": f"models/{GEMINI_EMBED_MODEL}",
+                    "content": {"parts": [{"text": t or " "}]}
+                }
+                for t in batch
+            ]
+        }
+        try:
+            async with httpx.AsyncClient(timeout=EMBED_TIMEOUT) as client:
+                res = await client.post(
+                    url,
+                    json=payload,
+                    headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+                )
+            if res.status_code != 200:
+                logger.error("Gemini Embeddings API error: status=%d", res.status_code)
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Gemini embedding service returned HTTP {res.status_code}. Verify your GEMINI_API_KEY.",
+                )
+            data = res.json()
+            for item in data.get("embeddings", []):
+                all_embeddings.append(item["values"])
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("Unexpected error calling Gemini embeddings API")
+            raise HTTPException(
+                status_code=503,
+                detail="An unexpected error occurred while generating embeddings with Gemini.",
+            ) from exc
+
+    return all_embeddings
+
+
+async def _embed_openai(texts: list[str], api_key: str) -> list[list[float]]:
+    """Generate embeddings using OpenAI API."""
+    try:
+        import openai as _openai  # noqa: PLC0415
+    except ImportError as exc:
+        raise HTTPException(
+            status_code=501,
+            detail="openai package is not installed. Use a GEMINI_API_KEY or install openai.",
+        ) from exc
+
+    client = _openai.AsyncOpenAI(api_key=api_key, timeout=EMBED_TIMEOUT)
+    all_embeddings: list[list[float]] = []
+
+    for batch_start in range(0, len(texts), EMBED_BATCH_SIZE):
+        batch = texts[batch_start: batch_start + EMBED_BATCH_SIZE]
+        try:
+            response = await client.embeddings.create(
+                model=OPENAI_EMBED_MODEL,
+                input=batch,
+            )
+            sorted_data: list[Any] = sorted(response.data, key=lambda e: e.index)
+            all_embeddings.extend([item.embedding for item in sorted_data])
+        except Exception as exc:
+            logger.exception("Unexpected error calling OpenAI embeddings API")
+            raise HTTPException(
+                status_code=503,
+                detail="An unexpected error occurred while generating embeddings.",
+            ) from exc
+
+    return all_embeddings
 
 
 # =========================================================================== #
@@ -36,96 +112,23 @@ EMBED_BATCH_SIZE: int = 100  # texts per OpenAI request
 
 async def get_embeddings(texts: list[str], api_key: str) -> list[list[float]]:
     """Generate embeddings for a list of text strings.
-
-    Parameters
-    ----------
-    texts:
-        Input strings to embed. Empty strings are accepted; the API will return
-        a zero-ish vector for them.
-    api_key:
-        OpenAI secret key. Must be non-empty; must NEVER be logged.
-
-    Returns
-    -------
-    list[list[float]]
-        One embedding vector per input text, in the same order.
-
-    Raises
-    ------
-    ValueError
-        When *api_key* is empty or blank.
-    ImportError
-        When the ``openai`` package is not installed.
-    HTTPException(503)
-        When the OpenAI API returns an error.
+    Automatically detects Gemini key (AIza...) or OpenAI key (sk-...).
     """
     if not api_key or not api_key.strip():
-        raise ValueError("OpenAI API key is required for embedding generation.")
-
-    try:
-        import openai as _openai  # noqa: PLC0415
-    except ImportError as exc:
-        raise ImportError(
-            "openai is required for embedding generation but is not installed. "
-            "Install it with:  pip install openai"
-        ) from exc
+        raise ValueError("API key is required for embedding generation.")
 
     if not texts:
         return []
 
-    client = _openai.AsyncOpenAI(api_key=api_key, timeout=EMBED_TIMEOUT)
-    all_embeddings: list[list[float]] = []
-
-    # Process in batches to stay within OpenAI token / item limits.
-    for batch_start in range(0, len(texts), EMBED_BATCH_SIZE):
-        batch = texts[batch_start: batch_start + EMBED_BATCH_SIZE]
-        try:
-            response = await client.embeddings.create(
-                model=EMBED_MODEL,
-                input=batch,
-            )
-        except _openai.OpenAIError as exc:
-            logger.error(
-                "OpenAI embeddings API error (batch starting at %d): %s",
-                batch_start,
-                type(exc).__name__,  # log type, NOT exc details which may echo key
-            )
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    "The embedding service is temporarily unavailable. "
-                    "Please try again later."
-                ),
-            ) from exc
-        except Exception as exc:
-            logger.exception("Unexpected error calling OpenAI embeddings API")
-            raise HTTPException(
-                status_code=503,
-                detail="An unexpected error occurred while generating embeddings.",
-            ) from exc
-
-        # OpenAI returns embeddings sorted by index; preserve that order.
-        sorted_data: list[Any] = sorted(response.data, key=lambda e: e.index)
-        all_embeddings.extend([item.embedding for item in sorted_data])
-
-    return all_embeddings
+    # If it's an OpenAI key (sk-...), use OpenAI client
+    if api_key.startswith("sk-"):
+        return await _embed_openai(texts, api_key)
+    # Default to Google Gemini
+    return await _embed_gemini(texts, api_key)
 
 
 async def get_query_embedding(text: str, api_key: str) -> list[float]:
-    """Generate an embedding for a single query string.
-
-    Parameters
-    ----------
-    text:
-        The query to embed.
-    api_key:
-        OpenAI secret key (server-side only, never logged or returned).
-
-    Returns
-    -------
-    list[float]
-        A single embedding vector.
-    """
+    """Generate an embedding for a single query string."""
     results = await get_embeddings([text], api_key=api_key)
     if not results:
         raise HTTPException(

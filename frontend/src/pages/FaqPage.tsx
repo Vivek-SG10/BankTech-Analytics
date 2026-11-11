@@ -538,7 +538,7 @@ function RAGHealthBanner() {
     <Alert type={health.status === 'degraded' ? 'warning' : 'error'}>
       <strong>RAG service: {health.status}.</strong>{' '}
       LLM: {health.llm} · Vector store: {health.vector_store}.{' '}
-      {health.llm === 'not_configured' && 'Set OPENAI_API_KEY in the backend .env to enable answers.'}
+      {health.llm === 'not_configured' && 'Set GEMINI_API_KEY in the backend .env to enable answers.'}
     </Alert>
   )
 }
