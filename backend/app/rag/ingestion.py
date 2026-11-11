@@ -387,7 +387,7 @@ async def ingest_document(
     if len(embeddings) != len(all_chunks):
         raise HTTPException(
             status_code=500,
-            detail="Embedding service returned unexpected number of vectors.",
+            detail=f"Embedding service returned {len(embeddings)} vectors for {len(all_chunks)} chunks.",
         )
 
     # 5. Build VectorStore chunk records with globally unique IDs ----------------

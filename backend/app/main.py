@@ -38,6 +38,18 @@ except Exception:  # noqa: BLE001
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
+    # Ensure all tables (including rag_documents) exist on startup
+    try:
+        import logging
+        from app.core.database import engine
+        from app.auth.models import Base
+        import app.surveys.models  # noqa: F401
+        import app.rag.models      # noqa: F401
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Could not auto-create tables on startup: %s", e)
     yield
     from app.core.database import engine
     await engine.dispose()

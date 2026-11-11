@@ -70,7 +70,11 @@ async def _embed_gemini(texts: list[str], api_key: str) -> list[list[float]]:
                 )
             data = res.json()
             for item in data.get("embeddings", []):
-                all_embeddings.append(item["values"])
+                if isinstance(item, dict):
+                    if "values" in item:
+                        all_embeddings.append(item["values"])
+                    elif "embedding" in item and isinstance(item["embedding"], dict):
+                        all_embeddings.append(item["embedding"].get("values", []))
         except HTTPException:
             raise
         except Exception as exc:

@@ -1,0 +1,95 @@
+BANKTECH ANALYTICS — BANKING POLICY DOCUMENT
+
+=======================================================
+1. ACCOUNT OPENING ELIGIBILITY
+=======================================================
+
+BankTech Analytics welcomes individuals and entities who meet our general eligibility criteria
+for account opening. Eligibility is assessed based on factors including age, residency status,
+and the purpose of the account. Accounts may be opened by resident individuals, joint applicants,
+minors (through guardians), sole proprietors, partnerships, private limited companies, public
+limited companies, trusts, associations, and other permissible entities as per applicable law.
+
+All applicants are subject to our internal customer due diligence process. We reserve the right
+to decline an account application without providing a reason, in accordance with our risk
+management and regulatory obligations.
+
+=======================================================
+2. DOCUMENT REQUIREMENTS FOR ACCOUNT OPENING
+=======================================================
+
+All account applicants must furnish documents satisfying Know Your Customer (KYC) norms as
+prescribed by the Reserve Bank of India and other relevant authorities. The required documents
+generally fall into two categories:
+
+Proof of Identity: Government-issued photo identity documents such as passport, Aadhaar card
+(linked to a registered mobile number), Permanent Account Number (PAN) card, voter identity
+card, or driving licence are accepted.
+
+Proof of Address: Recent utility bills, bank statements, government-issued address proofs, or
+any other document accepted as valid address proof under the KYC Master Direction may be
+submitted.
+
+For business accounts, additional documentation such as certificates of incorporation, memoranda
+of association, board resolutions, partnership deeds, GST registration certificates, and lists
+of authorised signatories may be required.
+
+Failure to furnish complete and valid documentation will result in the account application being
+placed on hold until the deficiency is resolved.
+
+=======================================================
+3. GENERAL LOAN ELIGIBILITY CRITERIA
+=======================================================
+
+BankTech Analytics offers a range of loan products including personal loans, home loans, vehicle
+loans, business loans, and educational loans. All loan applications are subject to credit
+assessment and internal underwriting policies.
+
+Loan eligibility is determined by, but is not limited to, the following factors:
+   - Creditworthiness of the applicant as assessed by recognised credit bureaus
+   - Repayment capacity based on income, existing liabilities, and financial commitments
+   - Nature, purpose, and tenure of the requested loan
+   - Collateral or security offered, where applicable
+
+All lending decisions are subject to credit assessment by authorised underwriting personnel.
+Loan approvals, amounts, and terms are at the sole discretion of BankTech Analytics and may
+differ from amounts applied for. Meeting the minimum eligibility criteria does not guarantee
+approval of a loan application.
+
+=======================================================
+4. PRIVACY POLICY SUMMARY
+=======================================================
+
+BankTech Analytics is committed to safeguarding the privacy and confidentiality of customer
+information. Personal and financial data collected from customers is used exclusively for the
+purposes of account servicing, regulatory compliance, fraud prevention, and improvement of
+our products and services.
+
+Customer data will not be shared with unaffiliated third parties without explicit consent,
+except where required by law, court order, or regulatory directive. We maintain technical,
+administrative, and physical safeguards to protect customer information from unauthorised
+access, disclosure, or misuse.
+
+Customers have the right to access their personal data held by us and to request correction
+of any inaccuracies. For data-related requests, please contact our Data Protection Officer
+through official channels listed on our website.
+
+=======================================================
+5. GRIEVANCE REDRESSAL
+=======================================================
+
+BankTech Analytics has established a structured grievance redressal mechanism in compliance
+with regulatory requirements. Any customer who is dissatisfied with our products, services,
+or the conduct of our staff is encouraged to raise a complaint through official channels.
+
+Complaints may be submitted via our official website, mobile banking application, branch
+offices, or customer care helpline. All complaints are assigned a unique reference number
+and acknowledged promptly. We aim to resolve grievances within the timeframe prescribed by
+applicable regulations.
+
+If a customer remains unsatisfied after exhausting our internal redressal process, they may
+escalate the matter to the relevant banking ombudsman or regulatory authority. Details of
+escalation channels are available on our official website and at all branch offices.
+
+BankTech Analytics treats all customer complaints seriously and uses feedback to continuously
+improve service delivery and operational standards.

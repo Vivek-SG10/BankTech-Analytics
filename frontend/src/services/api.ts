@@ -298,7 +298,12 @@ export const ragApi = {
     }).then(async res => {
       if (!res.ok) {
         let detail = `HTTP ${res.status} ${res.statusText}`
-        try { const b = await res.json(); detail = b.detail ?? detail } catch { /* ignore */ }
+        try {
+          const b = await res.json()
+          if (b.detail) {
+            detail = typeof b.detail === 'string' ? b.detail : JSON.stringify(b.detail)
+          }
+        } catch { /* ignore */ }
         throw new Error(detail)
       }
       return res.json() as Promise<KBDocumentFull>

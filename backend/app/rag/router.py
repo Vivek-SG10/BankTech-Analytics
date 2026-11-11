@@ -58,47 +58,57 @@ async def upload_document(
     from app.rag.ingestion import validate_file, ingest_document, compute_hash
     from app.rag.embeddings import get_embeddings
 
-    content = await file.read()
-    file_type = validate_file(file.filename or "", content)
-    content_hash = compute_hash(content)
+    try:
+        content = await file.read()
+        file_type = validate_file(file.filename or "", content)
+        content_hash = compute_hash(content)
 
-    # Deduplication check
-    existing = await db.execute(select(KBDocumentOrm).where(KBDocumentOrm.content_hash == content_hash))
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Document with identical content already exists in the knowledge base.")
+        # Deduplication check
+        existing = await db.execute(select(KBDocumentOrm).where(KBDocumentOrm.content_hash == content_hash))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Document with identical content already exists in the knowledge base.")
 
-    settings = get_settings()
-    if not settings.effective_api_key:
-        raise HTTPException(status_code=503, detail="LLM API key not configured. Set GEMINI_API_KEY (or OPENAI_API_KEY).")
+        settings = get_settings()
+        if not settings.effective_api_key:
+            raise HTTPException(status_code=503, detail="LLM API key not configured. Set GEMINI_API_KEY (or OPENAI_API_KEY).")
 
-    doc_id = str(uuid.uuid4())
-    vector_store = _get_vector_store()
+        doc_id = str(uuid.uuid4())
+        vector_store = _get_vector_store()
 
-    async def _embed(texts):
-        return await get_embeddings(texts, settings.effective_api_key)
+        async def _embed(texts):
+            return await get_embeddings(texts, settings.effective_api_key)
 
-    result = await ingest_document(
-        content=content, filename=file.filename or "upload",
-        title=title, description=description,
-        access_level=access_level, uploader_id=actor.id,
-        doc_id=doc_id, vector_store=vector_store, embedding_fn=_embed,
-    )
+        result = await ingest_document(
+            content=content, filename=file.filename or "upload",
+            title=title, description=description,
+            access_level=access_level, uploader_id=actor.id,
+            doc_id=doc_id, vector_store=vector_store, embedding_fn=_embed,
+        )
 
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
-    doc_orm = KBDocumentOrm(
-        id=doc_id, title=title, filename=file.filename or "upload",
-        file_type=file_type, file_size_bytes=len(content),
-        content_hash=content_hash, status="active",
-        version=1, uploaded_by=actor.id, access_level=access_level,
-        chunk_count=result["chunk_count"], description=description,
-        uploaded_at=now,
-        indexed_at=now,
-    )
-    db.add(doc_orm)
-    await db.commit()
-    await db.refresh(doc_orm)
-    return doc_orm
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        doc_orm = KBDocumentOrm(
+            id=doc_id, title=title, filename=file.filename or "upload",
+            file_type=file_type, file_size_bytes=len(content),
+            content_hash=content_hash, status="active",
+            version=1, uploaded_by=actor.id, access_level=access_level,
+            chunk_count=result["chunk_count"], description=description,
+            uploaded_at=now,
+            indexed_at=now,
+        )
+        db.add(doc_orm)
+        await db.commit()
+        await db.refresh(doc_orm)
+        return doc_orm
+    except HTTPException:
+        raise
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).exception("Upload document failed: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Upload failed: {type(exc).__name__}: {str(exc)}",
+        ) from exc
 
 
 # ── List documents ────────────────────────────────────────────────────────────
