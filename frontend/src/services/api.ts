@@ -20,6 +20,12 @@ import type {
   CorrelationResult,
   RegressionResult,
   SurveySubmissionsReport,
+  RAGQueryRequest,
+  RAGQueryResponse,
+  KBDocument,
+  KBDocumentFull,
+  DocumentStatusUpdatePayload,
+  RAGHealth,
 } from '../types'
 
 
@@ -249,9 +255,78 @@ export const analyticsApi = {
 // ── RAG / FAQ ─────────────────────────────────────────────────────────────
 
 export const ragApi = {
-  ask: (payload: AskRequest) =>
-    request<AskResponse>('/rag/ask', {
+  /** POST /api/v1/rag/query — ask a banking question */
+  query: (payload: RAGQueryRequest) =>
+    request<RAGQueryResponse>('/rag/query', {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  /** GET /api/v1/rag/health — RAG subsystem health */
+  health: () => request<RAGHealth>('/rag/health'),
+
+  /** GET /api/v1/rag/documents — list knowledge-base documents */
+  listDocuments: (statusFilter?: 'active' | 'superseded') => {
+    const q = statusFilter ? `?status=${statusFilter}` : ''
+    return request<KBDocument[]>(`/rag/documents${q}`)
+  },
+
+  /** GET /api/v1/rag/documents/{id} — get document metadata */
+  getDocument: (docId: string) =>
+    request<KBDocumentFull>(`/rag/documents/${docId}`),
+
+  /** POST /api/v1/rag/documents — upload a document (admin only) */
+  uploadDocument: (
+    file: File,
+    title: string,
+    accessLevel: 'all' | 'staff' | 'admin',
+    description?: string,
+  ) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('title', title)
+    form.append('access_level', accessLevel)
+    if (description) form.append('description', description)
+    // Do NOT set Content-Type — browser sets multipart/form-data with boundary
+    const token = localStorage.getItem('bt_token')
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    return fetch(`${BASE_URL}/rag/documents`, {
+      method: 'POST',
+      headers,
+      body: form,
+    }).then(async res => {
+      if (!res.ok) {
+        let detail = `HTTP ${res.status} ${res.statusText}`
+        try { const b = await res.json(); detail = b.detail ?? detail } catch { /* ignore */ }
+        throw new Error(detail)
+      }
+      return res.json() as Promise<KBDocumentFull>
+    })
+  },
+
+  /** DELETE /api/v1/rag/documents/{id} — delete a document (admin only) */
+  deleteDocument: (docId: string) =>
+    request<void>(`/rag/documents/${docId}`, { method: 'DELETE' }),
+
+  /** PATCH /api/v1/rag/documents/{id}/status — set active/superseded (admin only) */
+  updateStatus: (docId: string, payload: DocumentStatusUpdatePayload) =>
+    request<KBDocumentFull>(`/rag/documents/${docId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  /** POST /api/v1/rag/documents/{id}/reindex — trigger re-index (admin only) */
+  reindexDocument: (docId: string) =>
+    request<KBDocumentFull>(`/rag/documents/${docId}/reindex`, { method: 'POST' }),
+
+  // ── Legacy compatibility stub ──────────────────────────────────────────────
+  /** @deprecated Use ragApi.query() instead */
+  ask: (payload: AskRequest) =>
+    ragApi.query({ question: payload.question }).then(r => ({
+      answer: r.answer,
+      sources: r.sources.map(s => `${s.title}${s.page_or_section ? ` — ${s.page_or_section}` : ''}`),
+      is_fallback: !r.is_grounded,
+      conversation_id: '',
+    } as AskResponse)),
 }

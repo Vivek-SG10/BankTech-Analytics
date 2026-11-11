@@ -85,13 +85,15 @@ async def upload_document(
     )
 
     from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
     doc_orm = KBDocumentOrm(
         id=doc_id, title=title, filename=file.filename or "upload",
         file_type=file_type, file_size_bytes=len(content),
         content_hash=content_hash, status="active",
         version=1, uploaded_by=actor.id, access_level=access_level,
         chunk_count=result["chunk_count"], description=description,
-        indexed_at=datetime.now(timezone.utc),
+        uploaded_at=now,
+        indexed_at=now,
     )
     db.add(doc_orm)
     await db.commit()
