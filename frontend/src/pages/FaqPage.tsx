@@ -199,13 +199,7 @@ function MessageBubble({
           </div>
         )}
 
-        {/* Unsupported-answer notice */}
-        {msg.isFallback && !msg.isLoading && (
-          <div className="mt-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
-            ⚠️ This question is outside the scope of the available knowledge base, or involves
-            sensitive credentials. Please contact your bank directly for authoritative guidance.
-          </div>
-        )}
+
 
         {/* Latency */}
         {typeof msg.latency_ms === 'number' && !isNaN(msg.latency_ms) && !msg.isLoading && (

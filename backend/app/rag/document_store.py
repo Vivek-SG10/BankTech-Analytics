@@ -37,8 +37,13 @@ class _SimpleVectorStore:
     """Zero-dependency persistent vector store backed by JSON and NumPy."""
 
     def __init__(self, persist_directory: str, collection_name: str = "banktech_kb") -> None:
-        self.persist_dir = Path(persist_directory)
-        self.persist_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.persist_dir = Path(persist_directory)
+            self.persist_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            import tempfile
+            self.persist_dir = Path(tempfile.gettempdir()) / "banktech_kb"
+            self.persist_dir.mkdir(parents=True, exist_ok=True)
         self.file_path = self.persist_dir / f"{collection_name}.json"
         self._chunks: dict[str, dict[str, Any]] = {}
         self._load()
