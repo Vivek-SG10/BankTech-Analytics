@@ -10,10 +10,15 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
+connect_args = {}
+if "sqlite" in settings.database_url:
+    connect_args["check_same_thread"] = False
+
 engine = create_async_engine(
     settings.database_url,
     echo=settings.environment == "development",
     pool_pre_ping=True,
+    connect_args=connect_args,
 )
 
 AsyncSessionLocal = async_sessionmaker(
@@ -36,8 +41,11 @@ async def ping_database() -> bool:
     Does NOT raise — callers decide how to surface failures.
     """
     try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        return True
+        import asyncio
+        async def _check():
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            return True
+        return await asyncio.wait_for(_check(), timeout=2.0)
     except Exception:  # noqa: BLE001
         return False

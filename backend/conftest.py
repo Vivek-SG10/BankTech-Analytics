@@ -52,6 +52,7 @@ def _no_real_postgres():
 
     with (
         patch.object(AsyncEngine, "dispose", new=AsyncMock(return_value=None)),
-        patch.object(_db_module, "ping_database", new=AsyncMock(return_value=False)),
+        patch("app.core.database.ping_database", new=AsyncMock(return_value=True)),
+        patch("app.api.health.ping_database", new=AsyncMock(return_value=True)),
     ):
         yield
