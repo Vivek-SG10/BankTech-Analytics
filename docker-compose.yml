@@ -29,6 +29,7 @@ services:
       - .env
     environment:
       - ENVIRONMENT=development
+      - DOCKER_CONTAINER=true
       - DATABASE_URL=postgresql+psycopg://banktech:banktechpass@postgres:5432/banktech_db
     volumes:
       - ./backend:/app

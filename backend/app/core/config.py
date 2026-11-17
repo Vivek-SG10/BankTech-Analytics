@@ -37,9 +37,14 @@ class Settings(BaseSettings):
         Accepts plain postgresql://, postgresql+asyncpg://, or postgresql+psycopg://.
         """
         if v.startswith("postgresql://"):
-            return v.replace("postgresql://", "postgresql+psycopg://", 1)
-        if v.startswith("postgresql+asyncpg://"):
-            return v.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+            v = v.replace("postgresql://", "postgresql+psycopg://", 1)
+        elif v.startswith("postgresql+asyncpg://"):
+            v = v.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+
+        import os
+        if os.path.exists("/.dockerenv") or os.environ.get("DOCKER_CONTAINER") == "true":
+            v = v.replace("@localhost:5432", "@postgres:5432").replace("@127.0.0.1:5432", "@postgres:5432")
+
         return v
 
     # ── (Phase 1+) LLM / RAG ──────────────────────────────────────────────
@@ -87,7 +92,7 @@ def get_settings() -> Settings:
             from dotenv import find_dotenv, load_dotenv
             dotenv_path = find_dotenv(usecwd=True)
             if dotenv_path:
-                load_dotenv(dotenv_path, override=True)
+                load_dotenv(dotenv_path, override=False)
             _get_cached_settings.cache_clear()
             s = _get_cached_settings()
         except Exception:

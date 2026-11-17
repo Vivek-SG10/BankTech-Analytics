@@ -50,6 +50,11 @@ def get_url() -> str:
         if url.startswith(old):
             url = url.replace(old, new, 1)
             break
+
+    # Inside Docker, resolve localhost:5432 / 127.0.0.1:5432 to container name 'postgres'
+    if os.path.exists("/.dockerenv") or os.environ.get("DOCKER_CONTAINER") == "true":
+        url = url.replace("@localhost:5432", "@postgres:5432").replace("@127.0.0.1:5432", "@postgres:5432")
+
     return url
 
 
