@@ -41,7 +41,7 @@ async def _get_gemini_embed_model(api_key: str) -> tuple[str, str]:
                 data = res.json()
                 models = data.get("models", [])
                 # Look for preferred embedding models
-                for preferred in ["text-embedding-004", "embedding-001"]:
+                for preferred in ["gemini-embedding-001", "text-embedding-004", "embedding-001"]:
                     for m in models:
                         name = m.get("name", "").replace("models/", "")
                         methods = m.get("supportedGenerationMethods", [])
@@ -64,7 +64,7 @@ async def _get_gemini_embed_model(api_key: str) -> tuple[str, str]:
             logger.debug("ListModels check on %s failed: %s", version, exc)
 
     # Safe default fallback
-    return "v1beta", "embedding-001"
+    return "v1beta", "gemini-embedding-001"
 
 
 async def _embed_gemini(texts: list[str], api_key: str) -> list[list[float]]:

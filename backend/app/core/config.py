@@ -70,8 +70,8 @@ class Settings(BaseSettings):
     rag_chunk_size: int = 800
     rag_chunk_overlap: int = 150
     rag_max_file_size_mb: int = 20
-    rag_embed_model: str = "text-embedding-004"
-    rag_generation_model: str = "gemini-2.0-flash"
+    rag_embed_model: str = "gemini-embedding-001"
+    rag_generation_model: str = "gemini-flash-lite-latest"
     rag_max_distance: float = 1.5
     rag_request_timeout: int = 60
 

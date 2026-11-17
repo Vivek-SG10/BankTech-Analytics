@@ -65,25 +65,51 @@ async def generate_rbi_guideline_answer(question: str, api_key: str) -> str:
     return await _generate_gemini(prompt, api_key)
 
 
+_CANDIDATE_GEMINI_MODELS: list[str] = [
+    "gemini-flash-lite-latest",
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-3.8-flash",
+    "gemini-flash-latest",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+]
+
+_DISCOVERED_GENERATION_MODEL: str | None = None
+
+
 async def _generate_gemini(user_message: str, api_key: str) -> str:
     """Generate answer using Google Gemini API via httpx."""
+    global _DISCOVERED_GENERATION_MODEL
     import httpx
-    for model in ["gemini-2.0-flash", "gemini-1.5-flash"]:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-        payload = {
-            "system_instruction": {
-                "parts": [{"text": SYSTEM_PROMPT}]
-            },
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": user_message}]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.0
+
+    models_to_try: list[str] = []
+    if _DISCOVERED_GENERATION_MODEL:
+        models_to_try.append(_DISCOVERED_GENERATION_MODEL)
+    for m in _CANDIDATE_GEMINI_MODELS:
+        if m not in models_to_try:
+            models_to_try.append(m)
+
+    payload = {
+        "system_instruction": {
+            "parts": [{"text": SYSTEM_PROMPT}]
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": user_message}]
             }
+        ],
+        "generationConfig": {
+            "temperature": 0.0
         }
+    }
+
+    last_error: str = ""
+
+    for model in models_to_try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
         try:
             async with httpx.AsyncClient(timeout=GENERATION_TIMEOUT) as client:
                 res = await client.post(
@@ -97,8 +123,10 @@ async def _generate_gemini(user_message: str, api_key: str) -> str:
                 if candidates and "content" in candidates[0]:
                     parts = candidates[0]["content"].get("parts", [])
                     if parts and "text" in parts[0]:
+                        _DISCOVERED_GENERATION_MODEL = model
                         return parts[0]["text"]
-            elif res.status_code == 404:
+            elif res.status_code in (404, 503):
+                logger.info("Gemini model %s returned HTTP %s, trying next candidate...", model, res.status_code)
                 continue
             else:
                 err_msg = ""
@@ -107,24 +135,18 @@ async def _generate_gemini(user_message: str, api_key: str) -> str:
                     err_msg = err_data.get("error", {}).get("message", "")
                 except Exception:
                     pass
-                msg = f"Gemini API returned status {res.status_code}"
-                if err_msg:
-                    msg += f": {err_msg}"
-                msg += ". Please verify your GEMINI_API_KEY."
-                logger.error("Gemini API error (%s): %s", model, msg)
-                raise HTTPException(
-                    status_code=503,
-                    detail=msg,
-                )
-        except HTTPException:
-            raise
+                last_error = f"Gemini API ({model}) returned {res.status_code}: {err_msg}"
+                logger.error("%s", last_error)
         except Exception as exc:
-            logger.exception("Unexpected error calling Gemini API")
-            raise HTTPException(
-                status_code=503,
-                detail="An unexpected error occurred while generating answer with Gemini.",
-            ) from exc
+            logger.warning("Error calling Gemini model %s: %s", model, exc)
+            last_error = str(exc)
+            continue
 
+    if last_error:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Unable to generate response from Gemini API. {last_error}",
+        )
     return UNSUPPORTED_ANSWER
 
 
