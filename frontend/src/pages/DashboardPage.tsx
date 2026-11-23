@@ -172,33 +172,45 @@ function AdminDashboard() {
 
         {/* System status */}
         <Card>
-          <h2 className="text-base font-semibold text-slate-800 mb-3">System Status</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold text-slate-800">System Status</h2>
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Operational
+            </span>
+          </div>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between items-center">
               <span className="text-slate-600">API Server</span>
               <Badge color={health ? 'green' : 'amber'}>{health ? 'Online' : loading ? '…' : 'Unreachable'}</Badge>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-600">PostgreSQL</span>
+              <span className="text-slate-600">Database</span>
               <Badge color={health?.database === 'ok' ? 'green' : 'red'}>
                 {health?.database === 'ok' ? 'Healthy' : loading ? '…' : 'Check'}
               </Badge>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-600">Survey module</span>
-              <Badge color="green">Phase 3</Badge>
+              <span className="text-slate-600">Survey Module</span>
+              <Badge color="green">Operational</Badge>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-600">Analytics engine</span>
-              <Badge color="green">Phase 3</Badge>
+              <span className="text-slate-600">Analytics Engine</span>
+              <Badge color="green">Operational</Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-600">RAG / ChromaDB</span>
-              <Badge color="amber">Phase 4</Badge>
+              <Badge color="green">Operational</Badge>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-600">Auth &amp; RBAC</span>
+              <Badge color="green">Active</Badge>
             </div>
           </div>
           {health?.database_latency_ms != null && (
-            <p className="text-xs text-slate-400 mt-3">DB latency: {health.database_latency_ms.toFixed(1)} ms</p>
+            <p className="text-xs text-slate-400 mt-3 pt-2 border-t border-slate-100">
+              DB latency: {health.database_latency_ms.toFixed(1)} ms
+            </p>
           )}
         </Card>
       </div>

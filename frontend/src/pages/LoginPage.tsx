@@ -113,35 +113,7 @@ export default function LoginPage() {
             </Link>
           </p>
 
-          {/* Dev demo accounts hint */}
-          <details className="mt-4">
-            <summary className="cursor-pointer text-xs text-slate-400 text-center hover:text-slate-600 select-none">
-              🔑 Demo accounts (dev only)
-            </summary>
-            <div className="mt-3 p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1 text-xs text-slate-600 font-mono">
-              {[
-                ['admin@banktech.dev',      'Admin'],
-                ['researcher@banktech.dev', 'Researcher'],
-                ['manager@banktech.dev',    'Manager'],
-                ['employee@banktech.dev',   'Employee'],
-                ['customer@banktech.dev',   'Customer'],
-              ].map(([emailAddr, role]) => (
-                <div key={emailAddr} className="flex justify-between items-center gap-3">
-                  <button
-                    type="button"
-                    className="text-blue-600 hover:underline text-left"
-                    onClick={() => { setEmail(emailAddr); setPassword('Demo1234!') }}
-                  >
-                    {emailAddr}
-                  </button>
-                  <span className="text-slate-400 shrink-0">{role}</span>
-                </div>
-              ))}
-              <p className="text-slate-400 pt-1">Password: Demo1234! — click to fill</p>
-            </div>
-          </details>
-
-          <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+          <div className="mt-6 p-3 rounded-lg bg-amber-50 border border-amber-200">
             <p className="text-xs text-amber-700 text-center">
               <strong>Research participants only.</strong> Do not use real banking passwords here.
             </p>
