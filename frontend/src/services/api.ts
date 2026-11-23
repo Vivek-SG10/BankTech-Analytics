@@ -58,7 +58,27 @@ async function request<T>(
     let detail = `HTTP ${res.status} ${res.statusText}`
     try {
       const body = await res.json()
-      detail = body.detail ?? detail
+      if (typeof body.detail === 'string') {
+        detail = body.detail
+      } else if (Array.isArray(body.detail)) {
+        detail = body.detail
+          .map((item: any) => {
+            if (typeof item === 'string') return item
+            if (item && typeof item === 'object') {
+              const loc = Array.isArray(item.loc)
+                ? item.loc.filter((l: any) => l !== 'body').join('.')
+                : ''
+              const msg = item.msg || item.message || JSON.stringify(item)
+              return loc ? `${loc}: ${msg}` : msg
+            }
+            return String(item)
+          })
+          .join('; ')
+      } else if (body.detail && typeof body.detail === 'object') {
+        detail = body.detail.message || body.detail.msg || JSON.stringify(body.detail)
+      } else if (body.message) {
+        detail = typeof body.message === 'string' ? body.message : JSON.stringify(body.message)
+      }
     } catch {
       // ignore parse failure
     }

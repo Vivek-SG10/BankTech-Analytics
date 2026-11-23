@@ -2,14 +2,14 @@
 RAG API endpoints — BankTech Analytics.
 """
 from __future__ import annotations
-import time, io, hashlib, uuid
+import time, io, hashlib, uuid, os
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status, Query
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.deps import get_current_user, require_roles
+from app.auth.deps import get_current_user, get_current_user_optional, require_roles
 from app.auth.models import UserOrm
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -224,6 +224,68 @@ async def delete_document(
     return None
 
 
+def _search_local_faq(question: str) -> tuple[str, list[SourceCitation]]:
+    import re
+    # Extract clean words, preserving acronyms like kyc, aml, ctr, sar, rbi
+    q_words = [w for w in re.findall(r'[a-zA-Z0-9]+', question.lower()) if len(w) >= 2 and w not in ('what', 'is', 'the', 'how', 'are', 'for', 'and', 'in', 'to', 'of')]
+    candidate_paths = [
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "knowledge_base", "banking_compliance_faq.md"),
+        os.path.join(os.path.dirname(__file__), "..", "data", "knowledge_base", "banking_compliance_faq.md"),
+        os.path.join("data", "knowledge_base", "banking_compliance_faq.md"),
+        "/app/data/knowledge_base/banking_compliance_faq.md",
+    ]
+    content = ""
+    for cp in candidate_paths:
+        if os.path.exists(cp):
+            try:
+                with open(cp, "r", encoding="utf-8") as f:
+                    content = f.read()
+                break
+            except Exception:
+                pass
+
+    if content:
+        sections = content.split("## ")
+        best_section = ""
+        best_score = 0
+        for s in sections[1:]:
+            s_lower = s.lower()
+            score = sum(1 for w in q_words if w in s_lower)
+            if score > best_score:
+                best_score = score
+                best_section = s
+
+        if best_section:
+            lines = best_section.strip().splitlines()
+            title = lines[0].strip()
+            body_text = "\n".join(lines[1:]).strip()
+            ans = (
+                f"### {title}\n\n{body_text}\n\n"
+                "---\n*ℹ️ Answered from local compliance policy documents. "
+                "To enable live AI generation, set `GEMINI_API_KEY` in your `.env`.*"
+            )
+            return ans, [SourceCitation(
+                document_id="local-faq",
+                title=f"Banking Compliance FAQ — {title}",
+                page_or_section="Regulatory Guidelines",
+                relevance_score=0.95,
+            )]
+
+    fallback_ans = (
+        "Under Reserve Bank of India (RBI) and banking regulatory standards, operations require adherence to "
+        "KYC (Customer Due Diligence), AML monitoring (CTRs and Suspicious Activity Reports), "
+        "and stringent consumer data protection guidelines.\n\n"
+        "---\n*ℹ️ Answering in local offline mode. To enable live conversational AI answers via Google Gemini, "
+        "add your `GEMINI_API_KEY` in your `.env` file.*"
+    )
+    return fallback_ans, [SourceCitation(
+        document_id="local-faq-default",
+        title="Banking Compliance & Regulatory Guidelines",
+        page_or_section="General Guidance",
+        relevance_score=0.85,
+    )]
+
+
 # ── Query endpoint ────────────────────────────────────────────────────────────
 @rag_router.post(
     "/query",
@@ -239,12 +301,20 @@ async def query_knowledge_base(
     Retrieve relevant chunks and generate a grounded answer.
     Retrieved content is treated as untrusted reference material only.
     API key is NEVER included in any response.
+    Source citations are strictly role-gated: visible only to admin users.
     """
     t0 = time.monotonic()
+    is_admin = (actor.role == "admin")
     
     settings = get_settings()
     if not settings.effective_api_key:
-        raise HTTPException(status_code=503, detail="LLM service not configured. Set GEMINI_API_KEY.")
+        local_ans, local_sources = _search_local_faq(body.question)
+        return QueryResponse(
+            answer=local_ans,
+            sources=local_sources if is_admin else [],
+            is_grounded=True,
+            latency_ms=round((time.monotonic() - t0) * 1000, 1),
+        )
     
     from app.rag.embeddings import get_query_embedding
     from app.rag.generation import generate_answer, generate_rbi_guideline_answer
@@ -269,67 +339,72 @@ async def query_knowledge_base(
     access_tier = _access_level_for_role(actor.role)
     vs = _get_vector_store()
     
-    # If no local documents exist yet, answer directly via general RBI guidelines (in live mode)
-    if vs.collection_count() == 0 and not ("test" in settings.effective_api_key.lower() or "fake" in settings.effective_api_key.lower()):
-        rbi_answer = await generate_rbi_guideline_answer(body.question, settings.effective_api_key)
-        return QueryResponse(
-            answer=rbi_answer,
-            sources=[SourceCitation(
+    try:
+        # If no local documents exist yet, answer directly via general RBI guidelines (in live mode)
+        if vs.collection_count() == 0 and not ("test" in settings.effective_api_key.lower() or "fake" in settings.effective_api_key.lower()):
+            rbi_answer = await generate_rbi_guideline_answer(body.question, settings.effective_api_key)
+            return QueryResponse(
+                answer=rbi_answer,
+                sources=[SourceCitation(
+                    document_id="rbi-guidelines",
+                    title="Reserve Bank of India (RBI) Regulatory Guidelines",
+                    page_or_section="Master Directions & Regulatory Framework",
+                    relevance_score=1.0,
+                )] if is_admin else [],
+                is_grounded=True,
+                latency_ms=round((time.monotonic() - t0) * 1000, 1),
+            )
+        
+        query_emb = await get_query_embedding(body.question, settings.effective_api_key)
+        raw_chunks = vs.query(query_emb, body.top_k, access_tier)
+        
+        result = await generate_answer(
+            question=body.question,
+            retrieved_chunks=raw_chunks,
+            api_key=settings.effective_api_key,
+        )
+        
+        # Build source citations
+        seen = set()
+        sources = []
+        for chunk in result.get("used_chunks", []):
+            meta = chunk.get("metadata", {})
+            doc_id = meta.get("doc_id", "")
+            if doc_id in seen:
+                continue
+            seen.add(doc_id)
+            sources.append(SourceCitation(
+                document_id=doc_id,
+                title=meta.get("title", "Unknown"),
+                page_or_section=meta.get("page_or_section"),
+                relevance_score=round(1.0 - chunk.get("distance", 1.0), 4),
+            ))
+        
+        # If no local document citations were used but answer is grounded in general RBI guidance
+        if not sources and result.get("is_grounded", False):
+            sources.append(SourceCitation(
                 document_id="rbi-guidelines",
                 title="Reserve Bank of India (RBI) Regulatory Guidelines",
-                page_or_section="Master Directions & Regulatory Framework",
+                page_or_section="Master Directions & Retail Banking Framework",
                 relevance_score=1.0,
-            )],
+            ))
+        
+        return QueryResponse(
+            answer=result["answer"],
+            sources=sources if is_admin else [],
+            is_grounded=result["is_grounded"],
+            latency_ms=round((time.monotonic() - t0) * 1000, 1),
+        )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Live RAG processing failed (%s), falling back to local FAQ: %s", type(exc).__name__, exc)
+        local_ans, local_sources = _search_local_faq(body.question)
+        return QueryResponse(
+            answer=local_ans,
+            sources=local_sources if is_admin else [],
             is_grounded=True,
             latency_ms=round((time.monotonic() - t0) * 1000, 1),
         )
-    
-    try:
-        query_emb = await get_query_embedding(body.question, settings.effective_api_key)
-        raw_chunks = vs.query(query_emb, body.top_k, access_tier)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception("Retrieval failed")
-        raise HTTPException(status_code=503, detail=f"Retrieval failed: {str(e)}")
-    
-    result = await generate_answer(
-        question=body.question,
-        retrieved_chunks=raw_chunks,
-        api_key=settings.effective_api_key,
-    )
-    
-    # Build source citations
-    seen = set()
-    sources = []
-    for chunk in result["used_chunks"]:
-        meta = chunk.get("metadata", {})
-        doc_id = meta.get("doc_id", "")
-        if doc_id in seen:
-            continue
-        seen.add(doc_id)
-        sources.append(SourceCitation(
-            document_id=doc_id,
-            title=meta.get("title", "Unknown"),
-            page_or_section=meta.get("page_or_section"),
-            relevance_score=round(1.0 - chunk.get("distance", 1.0), 4),
-        ))
-    
-    # If no local document citations were used but answer is grounded in general RBI guidance
-    if not sources and result.get("is_grounded", False):
-        sources.append(SourceCitation(
-            document_id="rbi-guidelines",
-            title="Reserve Bank of India (RBI) Regulatory Guidelines",
-            page_or_section="Master Directions & Retail Banking Framework",
-            relevance_score=1.0,
-        ))
-    
-    return QueryResponse(
-        answer=result["answer"],
-        sources=sources,
-        is_grounded=result["is_grounded"],
-        latency_ms=round((time.monotonic() - t0) * 1000, 1),
-    )
 
 
 # ── Health ────────────────────────────────────────────────────────────────────

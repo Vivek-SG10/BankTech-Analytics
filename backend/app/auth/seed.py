@@ -73,3 +73,25 @@ async def seed_demo_accounts(db: AsyncSession = Depends(get_db)) -> list[UserOut
             created.append(UserOut.model_validate(user))
 
     return created
+
+
+async def auto_seed_demo_accounts_if_empty() -> None:
+    """Automatically seeds demo accounts on startup in development mode."""
+    from app.core.database import AsyncSessionLocal
+    try:
+        async with AsyncSessionLocal() as db:
+            hashed_pw = hash_password(DEMO_PASSWORD)
+            for acct in DEMO_ACCOUNTS:
+                existing = await get_user_by_email(db, acct["email"])
+                if existing is None:
+                    await create_user(
+                        db,
+                        name=acct["name"],
+                        email=acct["email"],
+                        hashed_password=hashed_pw,
+                        role=acct["role"],
+                        department=acct["department"],
+                    )
+    except Exception as e:
+        print(f"Auto-seed demo accounts notice: {e}")
+

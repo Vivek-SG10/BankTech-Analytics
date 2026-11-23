@@ -11,6 +11,8 @@
  *  - RAG health status indicator
  */
 import { useState, useRef, useEffect, useCallback, Component, type ErrorInfo, type ReactNode } from 'react'
+import ReactMarkdown, { type Components } from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Card, Spinner, Alert, Badge, Button } from '../components/ui'
 import { PageShell } from '../components/Layout'
 import { ragApi } from '../services/api'
@@ -157,14 +159,118 @@ function FeedbackButtons({
   )
 }
 
+const MARKDOWN_COMPONENTS: Components = {
+  h1: ({ children }) => (
+    <h1 className="text-base font-bold text-slate-900 mt-3 mb-1.5 first:mt-0 tracking-tight">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="text-sm font-bold text-slate-900 mt-2.5 mb-1.5 first:mt-0 tracking-tight">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="text-sm font-bold text-slate-900 mt-2.5 mb-1 first:mt-0 tracking-tight">
+      {children}
+    </h3>
+  ),
+  h4: ({ children }) => (
+    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mt-2 mb-1 first:mt-0">
+      {children}
+    </h4>
+  ),
+  p: ({ children }) => (
+    <p className="mb-2 last:mb-0 leading-relaxed text-slate-800">
+      {children}
+    </p>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-semibold text-slate-900">
+      {children}
+    </strong>
+  ),
+  em: ({ children }) => (
+    <em className="italic text-slate-700">
+      {children}
+    </em>
+  ),
+  ul: ({ children }) => (
+    <ul className="list-disc list-outside pl-5 my-2 space-y-1 text-slate-800">
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-decimal list-outside pl-5 my-2 space-y-1 text-slate-800">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => (
+    <li className="pl-0.5 leading-relaxed">
+      {children}
+    </li>
+  ),
+  hr: () => (
+    <hr className="my-3 border-t border-slate-200" />
+  ),
+  code: ({ children }) => (
+    <code className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-xs border border-slate-200 font-medium">
+      {children}
+    </code>
+  ),
+  pre: ({ children }) => (
+    <pre className="p-3 my-2 rounded-lg bg-slate-900 text-slate-100 overflow-x-auto text-xs font-mono">
+      {children}
+    </pre>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-4 border-blue-400 pl-3 py-1 my-2 text-slate-600 italic bg-blue-50/40 rounded-r">
+      {children}
+    </blockquote>
+  ),
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-2.5 rounded-lg border border-slate-200">
+      <table className="min-w-full divide-y divide-slate-200 text-xs text-left">
+        {children}
+      </table>
+    </div>
+  ),
+  th: ({ children }) => (
+    <th className="px-3 py-2 bg-slate-50 font-semibold text-slate-700 border-b border-slate-200">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="px-3 py-2 border-b border-slate-100 text-slate-700">
+      {children}
+    </td>
+  ),
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 hover:text-blue-800 underline font-medium"
+    >
+      {children}
+    </a>
+  ),
+}
+
 function MessageBubble({
   msg,
   onFeedback,
+  isAdmin: propIsAdmin,
 }: {
   msg: ChatMessage
   onFeedback: (id: string, rating: NonNullable<ChatMessage['feedback']>) => void
+  isAdmin?: boolean
 }) {
+  const { user } = useAuth()
+  const isAdmin = propIsAdmin ?? (user?.role === 'admin')
   const isUser = msg.role === 'user'
+  const contentStr = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '')
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} gap-2 items-end`}>
       {!isUser && (
@@ -174,9 +280,9 @@ function MessageBubble({
       )}
       <div className={`max-w-[80%] ${isUser ? 'order-first' : ''}`}>
         <div
-          className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+          className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
             isUser
-              ? 'bg-blue-600 text-white rounded-br-sm'
+              ? 'bg-blue-600 text-white rounded-br-sm whitespace-pre-wrap'
               : 'bg-white border border-slate-200 text-slate-800 rounded-bl-sm shadow-sm'
           }`}
         >
@@ -185,13 +291,20 @@ function MessageBubble({
               <Spinner size="sm" />
               Thinking…
             </span>
+          ) : isUser ? (
+            contentStr
           ) : (
-            typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content ?? '')
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={MARKDOWN_COMPONENTS}
+            >
+              {contentStr}
+            </ReactMarkdown>
           )}
         </div>
 
-        {/* Source citations */}
-        {Array.isArray(msg.sources) && msg.sources.length > 0 && (
+        {/* Source citations — ONLY rendered for admin users */}
+        {isAdmin && Array.isArray(msg.sources) && msg.sources.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1">
             {msg.sources.map((s, i) => (
               <SourceChip key={i} source={s} />
@@ -639,7 +752,17 @@ function FaqPageInner() {
         ),
       )
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : 'Unknown error'
+      let errMsg = 'Unknown error occurred while contacting the knowledge base.'
+      if (err instanceof Error) {
+        errMsg = err.message
+      } else if (typeof err === 'string') {
+        errMsg = err
+      } else if (err && typeof err === 'object') {
+        errMsg = (err as any).message || (err as any).detail || JSON.stringify(err)
+      }
+      if (errMsg === '[object Object]') {
+        errMsg = 'Invalid request parameters or server error. Please try again.'
+      }
 
       setApiError(errMsg)
 
@@ -738,7 +861,7 @@ function FaqPageInner() {
               {/* Chat history */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {messages.map(msg => (
-                  <MessageBubble key={msg.id} msg={msg} onFeedback={handleFeedback} />
+                  <MessageBubble key={msg.id} msg={msg} onFeedback={handleFeedback} isAdmin={isAdmin} />
                 ))}
                 <div ref={bottomRef} />
               </div>

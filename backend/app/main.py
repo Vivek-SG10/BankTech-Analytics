@@ -7,9 +7,11 @@ Routers are imported at module level so startup errors are immediately visible.
 Heavy optional dependencies (langchain, chromadb) remain guarded.
 """
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 from app.api.health import router as health_router
 from app.auth.router import auth_router
@@ -38,8 +40,17 @@ except Exception:  # noqa: BLE001
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
-    yield
+    from app.auth.models import Base
+    import app.surveys.models  # noqa: F401
     from app.core.database import engine
+    from app.auth.seed import auto_seed_demo_accounts_if_empty
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        await auto_seed_demo_accounts_if_empty()
+    except Exception as e:  # noqa: BLE001
+        print(f"Database schema initialization: {e}")
+    yield
     await engine.dispose()
 
 
@@ -73,6 +84,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── PDF Download Endpoint ─────────────────────────────────────────────────────
+@app.get("/download/defense-guide", tags=["Documentation"])
+async def download_defense_guide():
+    candidates = [
+        r"D:\BankTech-Analytics\BankTech_Analytics_Project_Defense_Guide.pdf",
+        r"D:\biology _abl\BankTech_Analytics_Project_Defense_Guide.pdf",
+    ]
+    for pdf_path in candidates:
+        if os.path.exists(pdf_path):
+            return FileResponse(
+                pdf_path,
+                media_type="application/pdf",
+                filename="BankTech_Analytics_Project_Defense_Guide.pdf",
+            )
+    return {"error": "PDF not found"}
 
 # ── Core routers ───────────────────────────────────────────────────────────────
 app.include_router(health_router,    prefix="/api/v1")

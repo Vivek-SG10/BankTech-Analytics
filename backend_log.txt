@@ -1,0 +1,257 @@
+INFO:     Started server process [4848]
+INFO:     Waiting for application startup.
+2026-11-17 13:58:15,242 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 13:58:15,242 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("users")
+2026-11-17 13:58:15,242 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-11-17 13:58:15,244 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("survey_employee")
+2026-11-17 13:58:15,244 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-11-17 13:58:15,245 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("survey_manager")
+2026-11-17 13:58:15,245 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-11-17 13:58:15,246 INFO sqlalchemy.engine.Engine PRAGMA main.table_info("survey_customer")
+2026-11-17 13:58:15,247 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-11-17 13:58:15,248 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+2026-11-17 13:58:15,417 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 13:58:15,417 INFO sqlalchemy.engine.Engine SELECT 1
+2026-11-17 13:58:15,418 INFO sqlalchemy.engine.Engine [generated in 0.00043s] ()
+2026-11-17 13:58:15,420 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:50897 - "GET /api/v1/health HTTP/1.1" 200 OK
+2026-11-17 13:58:57,109 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 13:58:57,109 INFO sqlalchemy.engine.Engine SELECT 1
+2026-11-17 13:58:57,109 INFO sqlalchemy.engine.Engine [cached since 41.69s ago] ()
+2026-11-17 13:58:57,111 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:59502 - "GET /api/v1/health HTTP/1.1" 200 OK
+2026-11-17 13:58:57,136 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 13:58:57,136 INFO sqlalchemy.engine.Engine SELECT 1
+2026-11-17 13:58:57,136 INFO sqlalchemy.engine.Engine [cached since 41.72s ago] ()
+2026-11-17 13:58:57,137 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:59506 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59509 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55900 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55900 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+2026-11-17 14:00:38,483 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:00:38,497 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.email = ?
+2026-11-17 14:00:38,497 INFO sqlalchemy.engine.Engine [generated in 0.00050s] ('manager@banktech.dev',)
+2026-11-17 14:00:39,252 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:57120 - "POST /api/v1/auth/login HTTP/1.1" 401 Unauthorized
+2026-11-17 14:01:02,447 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:01:02,449 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.email = ?
+2026-11-17 14:01:02,449 INFO sqlalchemy.engine.Engine [cached since 23.95s ago] ('manger@dev.com',)
+2026-11-17 14:01:02,453 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64222 - "POST /api/v1/auth/login HTTP/1.1" 401 Unauthorized
+2026-11-17 14:01:37,885 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:01:37,885 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.email = ?
+2026-11-17 14:01:37,885 INFO sqlalchemy.engine.Engine [cached since 59.39s ago] ('tharun.1si24is113@gmail.com',)
+2026-11-17 14:01:37,889 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:53510 - "POST /api/v1/auth/register HTTP/1.1" 409 Conflict
+2026-11-17 14:02:10,430 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:02:10,431 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.email = ?
+2026-11-17 14:02:10,432 INFO sqlalchemy.engine.Engine [cached since 91.93s ago] ('tharun.1si24is113@gmail.com',)
+2026-11-17 14:02:11,227 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:55538 - "POST /api/v1/auth/login HTTP/1.1" 200 OK
+2026-11-17 14:02:11,296 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:02:11,299 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:02:11,299 INFO sqlalchemy.engine.Engine [generated in 0.00055s] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:11,305 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:02:11,305 INFO sqlalchemy.engine.Engine [generated in 0.00091s] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:11,312 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:51974 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+2026-11-17 14:02:11,324 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:02:11,325 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:02:11,325 INFO sqlalchemy.engine.Engine [cached since 0.0271s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:11,328 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:02:11,328 INFO sqlalchemy.engine.Engine [cached since 0.02417s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:11,331 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49299 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+2026-11-17 14:02:15,627 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:02:15,628 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:02:15,628 INFO sqlalchemy.engine.Engine [cached since 4.33s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:15,630 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:02:15,631 INFO sqlalchemy.engine.Engine [cached since 4.326s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:15,633 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:52714 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+2026-11-17 14:02:15,643 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:02:15,644 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:02:15,644 INFO sqlalchemy.engine.Engine [cached since 4.346s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:15,646 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:02:15,646 INFO sqlalchemy.engine.Engine [cached since 4.342s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:15,648 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:63282 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+2026-11-17 14:02:20,545 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:02:20,546 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:02:20,546 INFO sqlalchemy.engine.Engine [cached since 9.248s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:20,549 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:02:20,549 INFO sqlalchemy.engine.Engine [cached since 9.244s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:20,553 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:50870 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+2026-11-17 14:02:20,566 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:02:20,566 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:02:20,566 INFO sqlalchemy.engine.Engine [cached since 9.268s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:20,569 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:02:20,569 INFO sqlalchemy.engine.Engine [cached since 9.264s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:20,571 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:65445 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+2026-11-17 14:02:43,021 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:02:43,022 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:02:43,022 INFO sqlalchemy.engine.Engine [cached since 31.72s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:43,024 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:02:43,025 INFO sqlalchemy.engine.Engine [cached since 31.72s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:43,027 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:54543 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+2026-11-17 14:02:43,039 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:02:43,040 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:02:43,040 INFO sqlalchemy.engine.Engine [cached since 31.74s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:43,043 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:02:43,043 INFO sqlalchemy.engine.Engine [cached since 31.74s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:02:43,046 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:55014 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+2026-11-17 14:03:17,702 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:03:17,702 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:03:17,702 INFO sqlalchemy.engine.Engine [cached since 66.4s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:17,743 INFO sqlalchemy.engine.Engine UPDATE survey_customer SET is_voided=? WHERE survey_customer.respondent_id = ? AND survey_customer.is_voided = 0
+2026-11-17 14:03:17,743 INFO sqlalchemy.engine.Engine [generated in 0.00043s] (1, 'faded82fc36d480c8ce42782608e1437')
+2026-11-17 14:03:17,758 INFO sqlalchemy.engine.Engine INSERT INTO survey_customer (id, respondent_id, department, is_voided, interaction_type, service_type, csei_1, csei_2, csei_3, csei_4, csei_5, csei_6, open_feedback) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING submitted_at
+2026-11-17 14:03:17,758 INFO sqlalchemy.engine.Engine [generated in 0.00058s] ('d14ca675430746aab8219f7c90841d0b', 'faded82fc36d480c8ce42782608e1437', None, 0, 'other', 'other', 4, 3, 5, 4, 4, 3, None)
+2026-11-17 14:03:17,767 INFO sqlalchemy.engine.Engine COMMIT
+2026-11-17 14:03:17,777 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:03:17,779 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.id = ?
+2026-11-17 14:03:17,779 INFO sqlalchemy.engine.Engine [generated in 0.00034s] ('d14ca675430746aab8219f7c90841d0b',)
+2026-11-17 14:03:17,782 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:60466 - "POST /api/v1/surveys/customer HTTP/1.1" 201 Created
+2026-11-17 14:03:20,000 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:03:20,001 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:03:20,001 INFO sqlalchemy.engine.Engine [cached since 68.7s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:20,005 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:03:20,005 INFO sqlalchemy.engine.Engine [cached since 68.7s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:20,009 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:64650 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+2026-11-17 14:03:20,023 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:03:20,023 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:03:20,023 INFO sqlalchemy.engine.Engine [cached since 68.72s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:20,026 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:03:20,027 INFO sqlalchemy.engine.Engine [cached since 68.72s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:20,029 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:50609 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57043 - "POST /api/v1/rag/ask HTTP/1.1" 200 OK
+2026-11-17 14:03:38,612 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:03:38,613 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:03:38,613 INFO sqlalchemy.engine.Engine [cached since 87.31s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:38,615 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:58249 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58251 - "GET /api/v1/surveys/mine HTTP/1.1" 403 Forbidden
+2026-11-17 14:03:38,633 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:03:38,633 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:03:38,633 INFO sqlalchemy.engine.Engine [cached since 87.33s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:38,635 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:03:38,635 INFO sqlalchemy.engine.Engine [cached since 87.33s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:38,638 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:58253 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+2026-11-17 14:03:38,645 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:03:38,645 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:03:38,645 INFO sqlalchemy.engine.Engine [cached since 87.34s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:38,648 INFO sqlalchemy.engine.Engine SELECT survey_customer.id, survey_customer.respondent_id, survey_customer.department, survey_customer.submitted_at, survey_customer.is_voided, survey_customer.interaction_type, survey_customer.service_type, survey_customer.csei_1, survey_customer.csei_2, survey_customer.csei_3, survey_customer.csei_4, survey_customer.csei_5, survey_customer.csei_6, survey_customer.open_feedback 
+FROM survey_customer 
+WHERE survey_customer.respondent_id = ? ORDER BY survey_customer.submitted_at DESC
+2026-11-17 14:03:38,648 INFO sqlalchemy.engine.Engine [cached since 87.34s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:38,650 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:58255 - "GET /api/v1/surveys/mine HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64420 - "POST /api/v1/rag/ask HTTP/1.1" 200 OK
+2026-11-17 14:03:49,099 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:03:49,100 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:03:49,100 INFO sqlalchemy.engine.Engine [cached since 97.8s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:49,102 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:56067 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56069 - "POST /api/v1/rag/ask HTTP/1.1" 200 OK
+2026-11-17 14:03:54,005 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:03:54,006 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:03:54,006 INFO sqlalchemy.engine.Engine [cached since 102.7s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:03:54,009 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:54140 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54142 - "POST /api/v1/rag/ask HTTP/1.1" 200 OK
+2026-11-17 14:04:00,101 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:04:00,102 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:04:00,103 INFO sqlalchemy.engine.Engine [cached since 108.8s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:04:00,108 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:56330 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+2026-11-17 14:08:23,797 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:08:23,797 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:08:23,797 INFO sqlalchemy.engine.Engine [cached since 372.5s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:08:23,800 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:61585 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+2026-11-17 14:08:42,612 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-11-17 14:08:42,612 INFO sqlalchemy.engine.Engine SELECT users.id, users.name, users.email, users.hashed_password, users.role, users.department, users.is_active, users.created_at, users.updated_at 
+FROM users 
+WHERE users.id = ?
+2026-11-17 14:08:42,612 INFO sqlalchemy.engine.Engine [cached since 391.3s ago] ('faded82fc36d480c8ce42782608e1437',)
+2026-11-17 14:08:42,613 INFO sqlalchemy.engine.Engine ROLLBACK
+INFO:     127.0.0.1:49849 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51465 - "GET /api/v1/auth/me HTTP/1.1" 401 Unauthorized

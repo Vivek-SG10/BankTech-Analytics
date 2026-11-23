@@ -70,6 +70,8 @@ describe('FaqPage Component', () => {
     await waitFor(() => {
       expect(screen.getByText(/Savings accounts require government photo ID/i)).toBeDefined()
     })
+    // Regular customer must NOT see source citations
+    expect(screen.queryByText(/Account Opening Policy/i)).toBeNull()
   })
 
   it('handles backend network/500/503 error without crashing', async () => {

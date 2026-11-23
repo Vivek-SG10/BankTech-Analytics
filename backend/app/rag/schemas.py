@@ -76,9 +76,9 @@ class QueryRequest(BaseModel):
     question: Annotated[
         str,
         Field(
-            min_length=3,
-            max_length=500,
-            description="The question to ask the knowledge base (3–500 chars).",
+            min_length=1,
+            max_length=4000,
+            description="The question to ask the knowledge base.",
         ),
     ]
     top_k: Annotated[
