@@ -126,5 +126,5 @@ BankTech-Analytics/
 | Phase | Scope | Status |
 |-------|-------|--------|
 | **0** | Scaffold, health endpoint, Vite proxy, health UI, tests | ✅ Complete |
-| 1 | Auth (JWT), transaction analytics, dashboard | 🔜 Pending |
-| 2 | RAG compliance assistant (LangChain + ChromaDB) | 🔜 Pending |
+| 1 | Auth (JWT), transaction analytics, dashboard | 	✅ Complete |
+| 2 | RAG compliance assistant (LangChain + ChromaDB) | 	✅ Complete |
